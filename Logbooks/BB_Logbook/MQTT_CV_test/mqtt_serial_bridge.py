@@ -16,6 +16,17 @@ from EnergyCalculation import (
     calculate_percentage
 )
 
+import math
+import tf2_ros
+import rclpy
+from rclpy.node import Node
+from tf2_ros import TransformException
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
+from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import PoseStamped
+
+
 #Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
 SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/dev/ttyUSB4", 
                 "/dev/ttyUSB5", "/dev/ttyUSB6", "/dev/ttyUSB7", "/dev/ttyUSB8","/dev/ttyUSB9", 
@@ -50,6 +61,8 @@ def video_feed():
 def start_web():
     """Runs the Flask server for static files + MJPEG stream."""
     app.run(host='0.0.0.0', port=8001, threaded=True)
+
+
 
 def send_2_esp(command):
     print(f"Sending to esp: {command}")
@@ -102,12 +115,119 @@ def follow_me():
         sleep(0.1)
 
 
+class PoseRecorder(Node):
+    def __init__(self):
+        super().__init__('pose_recorder')
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+    def get_current_pose(self):
+        try:
+            now = rclpy.time.Time()
+            trans: TransformStamped = self.tf_buffer.lookup_transform(
+                'map',
+                'base_link',
+                now,
+                timeout=rclpy.duration.Duration(seconds=1.0)
+            )
+            x = trans.transform.translation.x
+            y = trans.transform.translation.y
+
+            # Convert quaternion to yaw
+            q = trans.transform.rotation
+            siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+            cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+            theta = math.atan2(siny_cosp, cosy_cosp)
+
+            return {'x': x, 'y': y, 'theta': theta}
+        except TransformException as e:
+            self.get_logger().error(f'TF error: {str(e)}')
+            return None
+
+
+def gotoKeyLocation(pose_dict):
+    rclpy.init()
+    node = rclpy.create_node('goto_key_location')
+    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
+
+    msg = PoseStamped()
+    msg.header.frame_id = "map"
+    msg.pose.position.x = pose_dict['x']
+    msg.pose.position.y = pose_dict['y']
+    msg.pose.position.z = 0.0
+
+    theta = pose_dict['theta']
+    msg.pose.orientation.z = math.sin(theta / 2)
+    msg.pose.orientation.w = math.cos(theta / 2)
+
+    pub.publish(msg)
+    print(f"Pose sent to Nav2 : {pose_dict}")
+
+    rclpy.spin_once(node, timeout_sec=0.5)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+def save_current_location(mqtt_client):
+    rclpy.init()
+    node = PoseRecorder()
+    rclpy.spin_once(node, timeout_sec=1.0)
+
+    pose = node.get_current_pose()
+    if pose is not None:
+        print(f"✅ Position enregistrée : {pose}")
+        mqtt_client.publish("telemetry/saved_pose", json.dumps(pose))
+    else:
+        print("Cant save location.")
+        mqtt_client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
+
+    node.destroy_node()
+    rclpy.shutdown()
+
+
 def gotoKeyLocation():
-    print("ROS2 works ; Python stays silent")
+    rclpy.init()
+    node = rclpy.create_node('goto_key_location')
+    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
+
+    # Charger la première position sauvegardée
+    path = os.path.expanduser('~/.ros/saved_poses.json')
+    if not os.path.exists(path):
+        print("0 position saved")
+        return
+
+    with open(path, 'r') as f:
+        poses = json.load(f)
+
+    if not poses:
+        print("List empty")
+        return
+
+    pose_dict = poses[0]  # At first we take the first one
+
+    msg = PoseStamped()
+    msg.header.frame_id = "map"
+    msg.pose.position.x = pose_dict['x']
+    msg.pose.position.y = pose_dict['y']
+    msg.pose.position.z = 0.0
+
+    # Calculation frol theta
+    theta = pose_dict['theta']
+    msg.pose.orientation.z = math.sin(theta / 2)
+    msg.pose.orientation.w = math.cos(theta / 2)
+
+    pub.publish(msg)
+    print(f"Sent pose : {pose_dict}")
+
+    rclpy.spin_once(node, timeout_sec=0.5)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
 
 # ################################################################## TELEMETRY ##################################################################
 
-def esp_read_loop():
+def esp_read():
     """
     Read serial lines; when a 'PM:' message arrives, parse VB/EU,
     log to CSV, compute %, and publish on 'robot/battery'.
@@ -152,6 +272,7 @@ def esp_read_loop():
 
         sleep(0.05)
 
+
 def on_connect(client, userdata, flags, rc):
     gv.HumanDetected
     gv.offset
@@ -184,7 +305,7 @@ def on_message(client, userdata, msg):
         mode = payload
 
     # Check if the robot should stop following
-    if mode != "autonomous" or payload == "return":  # This should be GoToKeyLocation Instead of return
+    if mode != "autonomous" or payload == "GoToKeyLocation":  # This should be GoToKeyLocation Instead of return
         follow_mode = False
         print("follow mode OFF")
 
@@ -211,13 +332,23 @@ def on_message(client, userdata, msg):
             elif payload == "stop": # To be implemented later
                 send_2_esp("stop")
 
+    if payload == "save":
+        save_current_location(client)
+
+    elif topic == "robot/goto_keyloc":
+        try:
+            pose_dict = json.loads(payload)
+            gotoKeyLocation(pose_dict)
+        except Exception as e:
+            print(f"Invalid pose payload: {e}")
+
 
 def main():
     #Robot function
     #Telemetry loop
     global ser
     global SERIAL_PORT
-
+    threading.Thread(target=start_web, daemon=True).start()
     for port in SERIAL_PORT:
         try:
             ser = serial.Serial(port, baud_rate, timeout=1)
@@ -232,6 +363,8 @@ def main():
     client.on_message = on_message
     client.connect("localhost", 1883, 60)
     client.loop_forever()
+
+
     
 if __name__ == "__main__":
     main()
