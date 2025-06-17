@@ -90,7 +90,7 @@ def manual_control():
         else:
             send_2_esp("stop")
 
-        sleep(0.1)
+        sleep(0.2)
 
 def follow_me():
     gv.HumanDetected
