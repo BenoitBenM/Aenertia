@@ -185,46 +185,6 @@ def save_current_location(mqtt_client):
     rclpy.shutdown()
 
 
-def gotoKeyLocation():
-    rclpy.init()
-    node = rclpy.create_node('goto_key_location')
-    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
-
-    # Charger la première position sauvegardée
-    path = os.path.expanduser('~/.ros/saved_poses.json')
-    if not os.path.exists(path):
-        print("0 position saved")
-        return
-
-    with open(path, 'r') as f:
-        poses = json.load(f)
-
-    if not poses:
-        print("List empty")
-        return
-
-    pose_dict = poses[0]  # At first we take the first one
-
-    msg = PoseStamped()
-    msg.header.frame_id = "map"
-    msg.pose.position.x = pose_dict['x']
-    msg.pose.position.y = pose_dict['y']
-    msg.pose.position.z = 0.0
-
-    # Calculation frol theta
-    theta = pose_dict['theta']
-    msg.pose.orientation.z = math.sin(theta / 2)
-    msg.pose.orientation.w = math.cos(theta / 2)
-
-    pub.publish(msg)
-    print(f"Sent pose : {pose_dict}")
-
-    rclpy.spin_once(node, timeout_sec=0.5)
-    node.destroy_node()
-    rclpy.shutdown()
-
-
-
 # ################################################################## TELEMETRY ##################################################################
 
 def esp_read():
@@ -365,6 +325,5 @@ def main():
     client.loop_forever()
 
 
-    
 if __name__ == "__main__":
     main()

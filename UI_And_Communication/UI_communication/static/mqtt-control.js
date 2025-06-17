@@ -4,11 +4,18 @@
 const brokerUrl = 'ws://172.20.10.9:9001';  // Update this if your broker is on a different IP/port
 const opts = { keepalive: 30, reconnectPeriod: 1000 };
 const client = mqtt.connect(brokerUrl, opts);
+const savedLocations = {};
+
 
 // ---- MQTT Event Handlers ----
 client.on('connect', () => {
   console.log('[MQTT] Connected to broker:', brokerUrl);
   document.getElementById('mqtt-status').innerText = 'MQTT: Connected';
+  
+  document.getElementById("saveLocationBtn").addEventListener("click", () => {
+  client.publish("robot/manual/command", "save");});
+
+  client.publish("robot/manual/command", "save");
   client.subscribe('robot/battery');
   client.subscribe('robot/vb');
   client.subscribe('robot/eu');
@@ -39,6 +46,24 @@ client.on('message', (topic, message) => {
       keys.map(k => `<li><button class="key-button" onclick="assignKeyLocation('${k}')">${k}</button></li>`).join('') +
       '</ul>';
   }
+
+  else if (topic === "telemetry/saved_pose") {
+    try {
+      const pose = JSON.parse(message.toString());
+      if (pose.error) {
+        alert("Cannot save position");
+      } else {
+        const name = prompt("Nom de la position ?", "Position");
+        if (name) {
+          savedLocations[name] = pose;
+          updateLocationListUI();
+        }
+      }
+    } catch (e) {
+      console.error("Erreur parsing pose:", e);
+    }
+  }
+
 });
 
 client.on('error', err => {
@@ -302,4 +327,21 @@ function sendToChatGPT(commandText) {
       console.error('[DEBUG] Error contacting GPT API or Flask:', err);
       alert('Error: Could not contact interpretation server.');
     });
+}
+
+// KEY LOCATION LOGIC
+
+function updateLocationListUI() {
+  const list = document.getElementById("locationList");
+  list.innerHTML = "";
+  for (const name in savedLocations) {
+    const btn = document.createElement("button");
+    btn.innerText = `Go to ${name}`;
+    btn.className = "keyloc-btn"; // pour le styliser si tu veux
+    btn.onclick = () => {
+      const pose = savedLocations[name];
+      client.publish("robot/goto_keyloc", JSON.stringify(pose));
+    };
+    list.appendChild(btn);
+  }
 }
