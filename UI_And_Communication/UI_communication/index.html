@@ -9,6 +9,7 @@
   <script src="static/mqtt-control.js" defer></script>
 </head>
 <body>
+  <!-- Info Bar -->
   <div class="info-bar">
     <div id="time">--:--</div>
     <div id="battery">Battery: --%</div>
@@ -17,12 +18,14 @@
     <div id="mqtt-status">MQTT: --</div>
   </div>
 
+  <!-- Mode Buttons -->
   <div class="mode-bar-top-left">
     <button class="button" id="btn-manual">Set Manual</button>
     <button class="button" id="btn-autonomous">Set Autonomous</button>
     <button class="button" id="btn-test">Set Test Mode</button>
   </div>
 
+  <!-- Tabs -->
   <div class="tabs">
     <button onclick="showTab('pad')" class="active">Manual Control</button>
     <button onclick="showTab('flash')">Test</button>
@@ -117,7 +120,7 @@
     </div>
   </div>
 
-  <!-- AUTONOMOUS -->
+   <!-- AUTONOMOUS -->
   <div id="auto" class="tab">
     <div class="card video-layout">
       <div class="video-container">
@@ -131,33 +134,53 @@
       </div>
       <div class="controls-container">
         <h2>Autonomous Control</h2>
-        <div class="auto-grid">
-          <div class="auto-column">
-            <button class="button" id="btn-follow">Follow Me</button><br>
-            <button class="button" id="btn-return-key">Return to Key Location</button>
-          </div>
-        </div>
+
+        <!-- Four Location Buttons Table -->
+        <table class="location-table">
+          <thead><tr><th colspan="4">Return to Key Location</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>
+                <button class="button loc-btn" id="loc-btn-1">Location 1</button>
+                <div class="loc-name" id="loc-name-1">—</div>
+              </td>
+              <td>
+                <button class="button loc-btn" id="loc-btn-2">Location 2</button>
+                <div class="loc-name" id="loc-name-2">—</div>
+              </td>
+              <td>
+                <button class="button loc-btn" id="loc-btn-3">Location 3</button>
+                <div class="loc-name" id="loc-name-3">—</div>
+              </td>
+              <td>
+                <button class="button loc-btn" id="loc-btn-4">Location 4</button>
+                <div class="loc-name" id="loc-name-4">—</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
       </div>
     </div>
   </div>
 
-  <!-- Assign Key Location (persistent on all tabs) -->
+  <!-- Assign Key Location & Global Voice Control -->
   <div class="assign-key-container">
     <div class="assign-box">
       <label for="key-loc">Assign Key Location:</label>
       <input id="key-loc" type="text">
       <button class="button" id="btn-assign-key">Assign</button>
-      <button class="button" id="btn-show-keys">Show Key Locations</button>
       <button class="button voice-button" id="start-voice">🎤 Speak Command</button>
       <div id="key-list"></div>
     </div>
   </div>
 
+  <!-- Tab switching script -->
   <script>
     function showTab(id) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-      document.querySelector(`.tabs button[onclick="showTab('${id}')"]`)?.classList.add('active');
+      document.querySelector(`.tabs button[onclick="showTab('${id}')"]`).classList.add('active');
       document.getElementById(id).classList.add('active');
     }
   </script>
