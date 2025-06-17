@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import time
 import threading
 
-from picamera2 import Picamera2
+# from picamera2 import Picamera2
 import cv2
 
 # Tasks‐API imports
@@ -40,23 +40,35 @@ def pose_detection():
     landmarker = PoseLandmarker.create_from_options(options)
 
     # 2) Start the PiCamera2 at 640×480 (full FOV)
-    n = 2 # prevents PiCamera zoom
-    cam = Picamera2()
-    cam.configure(cam.create_video_configuration(
-        main={"size": (640*n, 480*n), "format": "RGB888"}
-    ))
-    cam.start()
-    time.sleep(1)  # let auto-exposure / white balance settle
+#    n = 2 # prevents PiCamera zoom
+#    cam = Picamera2()
+#    cam.configure(cam.create_video_configuration(
+#        main={"size": (640*n, 480*n), "format": "RGB888"}
+#    ))
+#    cam.start()
+#    time.sleep(1)  # let auto-exposure / white balance settle
 
-    # Debug: confirm the actual configuration
-    cfg = cam.camera_config["main"]["size"]
-    # print(f"Camera configured at: {cfg[0]}×{cfg[1]}")
+#    # Debug: confirm the actual configuration
+#    cfg = cam.camera_config["main"]["size"]
+#    # print(f"Camera configured at: {cfg[0]}×{cfg[1]}")
+
+    cam = cv2.VideoCapture(0)  # 0 = /dev/video0, change if needed
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    time.sleep(1)
+    
+    print("Camera Sttarted")
+
 
     mp_image_format = mp.ImageFormat.SRGB
 
     while True:
         # 3) Capture & wrap frame
-        frame_bgr = cam.capture_array()
+        ret, frame_bgr = cam.read()
+        if not ret:
+            print("⚠️ Failed to grab frame from USB camera")
+            continue
+	
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(
             image_format=mp_image_format,
@@ -109,16 +121,16 @@ def pose_detection():
         with frame_lock:
             latest_frame = frame_bgr.copy()
             
-    #     Display for debugging
-        # cv2.imshow("Lower-Body Follow", frame_bgr)
-        # if cv2.waitKey(1) & 0xFF == ord("q"):
-        #     break
+#    #     Display for debugging
+#        cv2.imshow("Lower-Body Follow", frame_bgr)
+#        if cv2.waitKey(1) & 0xFF == ord("q"):
+#            break
 
-    # finally:
-    #     # 8) Cleanup 
-    #     landmarker.close()
-    #     cam.stop()
-    #     cv2.destroyAllWindows()
+
+#        # 8) Cleanup 
+#    landmarker.close()
+#    cam.release()
+#    cv2.destroyAllWindows()
 
 
 
