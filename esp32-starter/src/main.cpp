@@ -226,27 +226,6 @@ void loop()
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
 
-    // NEEDED FOR WHEEL ODOM SLAM
-    int32_t pos1 = step1.getPosition();
-    int32_t pos2 = step2.getPosition();
-
-    // ——— Begin IMU+Odometry JSON output ———
-    StaticJsonDocument<256> doc2;
-    doc2["ax"]   = a.acceleration.x;
-    doc2["ay"]   = a.acceleration.y;
-    doc2["az"]   = a.acceleration.z;
-    doc2["gx"]   = g.gyro.x;
-    doc2["gy"]   = g.gyro.y;
-    doc2["gz"]   = g.gyro.z;
-    doc2["pos1"] = pos1;  // step1.getPosition()
-    doc2["pos2"] = pos2;  // step2.getPosition()
-
-    String imuOdom;
-    serializeJson(doc2, imuOdom);
-    Serial.print("IMUODO: ");
-    Serial.println(imuOdom);
-    // ——— End IMU+Odometry JSON output ———
-
     tiltx_raw = atan2(a.acceleration.z, sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y));
     gyroRate = g.gyro.y-0.005;
     tiltx =(C * (tiltx + gyroRate * dt) + (1 - C) * tiltx_raw);

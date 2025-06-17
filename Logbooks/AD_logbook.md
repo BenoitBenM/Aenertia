@@ -262,7 +262,7 @@ def upload_file_to_s3(local_path, bucket_name=BUCKET_NAME, s3_key=None):
     from botocore.exceptions import ClientError
 
     if not os.path.isfile(local_path):
-        print(f"❌ File does not exist: {local_path}")
+        print(f"File does not exist: {local_path}")
         return None
 
     if not s3_key:
@@ -270,10 +270,10 @@ def upload_file_to_s3(local_path, bucket_name=BUCKET_NAME, s3_key=None):
 
     try:
         s3.upload_file(local_path, bucket_name, s3_key)
-        print(f"✅ Uploaded {local_path} to s3://{bucket_name}/{s3_key}")
+        print(f"Uploaded {local_path} to s3://{bucket_name}/{s3_key}")
         return f"s3://{bucket_name}/{s3_key}"
     except ClientError as e:
-        print(f"❌ Upload failed: {e}")
+        print(f"Upload failed: {e}")
         return None
 ```
 
