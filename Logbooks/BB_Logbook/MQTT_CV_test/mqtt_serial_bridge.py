@@ -397,7 +397,6 @@ def on_message(client, userdata, msg):
         else:
             print(f"[KeyLocation] Could not get pose for '{key_name}'")
         node.destroy_node()
-        rclpy.shutdown()
 
 
 def main():
