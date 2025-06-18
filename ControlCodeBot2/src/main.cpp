@@ -43,7 +43,7 @@ float kp_o = -0.002;//-0.002
 float ki_o = 0;
 float kd_o = 0;
 
-float kp_turn = -25;//-25  
+float kp_turn = -100;//-25  
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
@@ -55,7 +55,7 @@ float targetYaw = 0;  // 希望的角度，或者从遥控器获得的转动指�
 float lastAcceleration=0.0;
 
 float speed_max = 12;
-float yaw_max = 0.15;
+float yaw_max = 0.05;
 
 float targetSpeed = 0;
 float actualSpeed = 0;
