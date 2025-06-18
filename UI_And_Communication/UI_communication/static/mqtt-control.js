@@ -69,6 +69,28 @@ window.addEventListener('DOMContentLoaded', () => {
       Object.entries(locs).forEach(([name, coord])=>{
         savedCoords[name] = coord;
       });
+
+      // Push to backend to save in DynamoDB
+      Object.entries(locs).forEach(([name, coord]) => {
+        if (coord && coord.x !== undefined && coord.y !== undefined) {
+          fetch("http://localhost:8000/store_key_location", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              name: name,
+              x: coord.x,
+              y: coord.y,
+              theta: coord.theta || 0.0
+            })
+          }).then(res => res.json())
+            .then(data => console.log("[DynamoDB] Saved:", data))
+            .catch(err => console.error("[DynamoDB] Save failed:", err));
+        }
+      });
+
+
       // update 4 UI slots
       for (let i=1; i<=4; i++) {
         const name = savedNames[i-1];

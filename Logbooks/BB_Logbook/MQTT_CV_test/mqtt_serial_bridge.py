@@ -16,7 +16,6 @@ from EnergyCalculation import (
     append_to_csv,
     calculate_percentage
 )
-import multiprocessing
 import math
 import tf2_ros
 import rclpy
@@ -30,7 +29,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
-
+rclpy.init()
 
 #Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
 SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/dev/ttyUSB4", 
@@ -178,7 +177,6 @@ def has_reached_goal(goal):
 
 
 def gotoKeyLocation(pose_dict):
-    rclpy.init()
     node = rclpy.create_node('goto_key_location')
 
     # 1. Publier la pose cible
@@ -195,8 +193,8 @@ def gotoKeyLocation(pose_dict):
     print(f"[NAV2] Pose sent to Nav2: {pose_dict}")
 
     # 2. Lancer l'écoute de /cmd_vel dans un process séparé
-    drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
-    drive_proc.start()
+    threading.Thread(target=nav2_drive_from_cmd_vel, daemon=True).start()
+
 
     # 3. Souscrire à /amcl_pose pour connaître la position en temps réel
     sub = node.create_subscription(
@@ -215,12 +213,10 @@ def gotoKeyLocation(pose_dict):
                 break
     finally:
         node.destroy_node()
-        rclpy.shutdown()
 
 
 
 def save_current_location(client):
-    rclpy.init()
     node = PoseRecorder()
     rclpy.spin_once(node, timeout_sec=1.0)
 
@@ -233,11 +229,8 @@ def save_current_location(client):
         client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
 
     node.destroy_node()
-    rclpy.shutdown()
-
 
 def nav2_drive_from_cmd_vel():
-    rclpy.init()
     node = rclpy.create_node('cmd_vel_listener')
 
     def callback(msg: Twist):
@@ -274,7 +267,6 @@ def nav2_drive_from_cmd_vel():
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
 
 # ################################################################## TELEMETRY ##################################################################
 
@@ -332,7 +324,8 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("robot/mode")
     client.subscribe("robot/auto")
     client.subscribe("robot/manual/command")
-    client.subscribe("robot/auto/key/assign")
+    client.subscribe("robot/auto/key/assign")    
+    client.subscribe("robot/goto_keyloc")
     client.publish("robot/auto/key/locations", json.dumps(key_locations))
 
 #     # Removed the thread for continuous CV and put it in follow mode
@@ -394,7 +387,6 @@ def on_message(client, userdata, msg):
 
     elif topic == "robot/auto/key/assign":
         key_name = payload.strip()
-        rclpy.init()
         node = PoseRecorder()
         rclpy.spin_once(node, timeout_sec=1.0)
         pose = node.get_current_pose()
@@ -405,13 +397,12 @@ def on_message(client, userdata, msg):
         else:
             print(f"[KeyLocation] Could not get pose for '{key_name}'")
         node.destroy_node()
-        rclpy.shutdown()
-
 
 
 def main():
     #Robot function
     #Telemetry loop
+
     global ser
     global SERIAL_PORT
     # threading.Thread(target=start_web, daemon=True).start()
