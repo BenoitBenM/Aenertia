@@ -121,6 +121,8 @@ def pose_detection():
 
         with frame_lock:
             latest_frame = frame_bgr.copy()
+
+        time.sleep(0.1)
             
 #    #     Display for debugging
 #        cv2.imshow("Lower-Body Follow", frame_bgr)
