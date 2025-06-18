@@ -36,13 +36,13 @@ SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/d
 baud_rate = 115200
 
 #global variables
-gv.follow_mode = False
 manual_mode = False
 payload = "stop"
 ser = None
 mode = "manual"
-gv.HumanDetected = False
-gv.offset = 0
+#gv.follow_mode = False
+#gv.HumanDetected = False
+#gv.offset = 0
 
 # # FLASK APP SETUP
 # app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
