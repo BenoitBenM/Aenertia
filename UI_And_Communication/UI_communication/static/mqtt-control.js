@@ -4,117 +4,12 @@ console.log('[MQTT-CTRL] mqtt-control.js loaded');
 
 window.addEventListener('DOMContentLoaded', () => {
   // === MQTT Setup ===
-  const brokerUrl = 'ws://172.20.10.9:9001';
-  const client = mqtt.connect(brokerUrl, {
-    keepalive: 30,
-    reconnectPeriod: 1000
-  });
+  const brokerUrl = 'ws://172.20.10.6:9001';
+  const client    = mqtt.connect(brokerUrl, { keepalive:30, reconnectPeriod:1000 });
 
   // === In-Browser State ===
-  const savedNames  = [];   // up to 4 names
-  const savedCoords = {};   // name → {x,y,theta}
-
-  // === MQTT Event Handlers ===
-  client.on('connect', () => {
-    console.log('[MQTT] Connected to broker:', brokerUrl);
-    document.getElementById('mqtt-status').innerText = 'MQTT: Connected';
-
-    // Subscribe to telemetry and key-location topics
-    [
-      'robot/battery',
-      'robot/vb',
-      'robot/eu',
-      'robot/keys',
-      'robot/auto/key/locations'
-    ].forEach(topic => {
-      client.subscribe(topic, err => {
-        if (err) console.error('[MQTT] Subscribe error', topic, err);
-        else    console.log('[MQTT] Subscribed to', topic);
-      });
-    });
-  });
-
-  client.on('message', (topic, buf) => {
-    const msg = buf.toString();
-    console.log('[MQTT] ←', topic, msg);
-
-    // VB telemetry
-    if (topic === 'robot/vb') {
-      document.getElementById('vb').innerText = `VB: ${msg}`;
-      return;
-    }
-
-    // EU telemetry
-    if (topic === 'robot/eu') {
-      document.getElementById('eu').innerText = `EU: ${msg}`;
-      return;
-    }
-
-    // Battery percentage
-    if (topic === 'robot/battery') {
-      document.getElementById('battery').innerText = `Battery: ${msg}%`;
-      return;
-    }
-
-    // Dynamic key-assignment buttons
-    if (topic === 'robot/keys') {
-      let keys;
-      try { keys = JSON.parse(msg); }
-      catch {
-        console.error('[MQTT] Invalid JSON on robot/keys:', msg);
-        return;
-      }
-      document.getElementById('key-list').innerHTML =
-        '<ul>' +
-        keys.map(k =>
-          `<li><button class="key-button" onclick="assignKeyLocation('${k}')">${k}</button></li>`
-        ).join('') +
-        '</ul>';
-      console.log('[UI] Rendered dynamic keys:', keys);
-      return;
-    }
-
-    // Full map of saved key-locations
-    if (topic === 'robot/auto/key/locations') {
-      let locs;
-      try { locs = JSON.parse(msg); }
-      catch {
-        console.error('[MQTT] Invalid JSON on key locations:', msg);
-        return;
-      }
-      console.log('[MQTT] Received key locations:', locs);
-
-      // Merge into savedCoords
-      Object.entries(locs).forEach(([name, coord]) => {
-        savedCoords[name] = coord;
-      });
-
-      // Update each of the four slots
-      for (let i = 1; i <= 4; i++) {
-        const name = savedNames[i - 1];
-        const el   = document.getElementById(`loc-name-${i}`);
-        if (!name) {
-          el.innerText = '—';
-        } else if (savedCoords[name]) {
-          const c = savedCoords[name];
-          el.innerText = `${name}: (x=${c.x.toFixed(2)}, y=${c.y.toFixed(2)}, θ=${c.theta.toFixed(2)} rad)`;
-        } else {
-          el.innerText = `${name}: (x=…, y=…, θ=…)`;
-        }
-      }
-      return;
-    }
-  });
-
-  client.on('error', err => {
-    console.error('[MQTT] Error:', err);
-    document.getElementById('mqtt-status').innerText = 'MQTT: Error';
-  });
-
-  client.on('close', () => {
-    console.warn('[MQTT] Connection closed');
-    document.getElementById('mqtt-status').innerText = 'MQTT: Disconnected';
-  });
+  const savedNames  = [];    // up to 4
+  const savedCoords = {};    // name → {x,y,theta}
 
   // === Helper to publish ===
   function pub(topic, payload) {
@@ -122,214 +17,253 @@ window.addEventListener('DOMContentLoaded', () => {
       client.publish(topic, payload);
       console.log('[MQTT] →', topic, payload);
     } else {
-      console.warn('[MQTT] Cannot publish, disconnected:', topic, payload);
+      console.warn('[MQTT] Cannot publish, disconnected:', topic);
     }
   }
 
-  // === Assign Key Location ===
-  window.assignKeyLocation = name => {
-    console.log('[UI] assignKeyLocation()', name);
-    pub('robot/auto/key/assign', name);
+  // === On Connect ===
+  client.on('connect', () => {
+    console.log('[MQTT] Connected to', brokerUrl);
+    document.getElementById('mqtt-status').innerText = 'MQTT: Connected';
 
-    // If new and there's room, reserve next slot
-    if (!savedNames.includes(name) && savedNames.length < 4) {
-      savedNames.push(name);
-      const idx = savedNames.length;
-      console.log(`[UI] Slot #${idx} assigned to "${name}"`);
-      document.getElementById(`loc-name-${idx}`)
-              .innerText = `${name}: (x=…, y=…, θ=…)`;
+    // subscribe to needed topics
+    ['robot/battery','robot/vb','robot/eu','robot/keys','robot/auto/key/locations']
+      .forEach(t => client.subscribe(t, err => {
+        if (err) console.error('[MQTT] Sub error', t, err);
+        else    console.log('[MQTT] Subscribed to', t);
+      }));
+  });
+
+  // === On Message ===
+  client.on('message', (topic, buf) => {
+    const msg = buf.toString();
+    console.log('[MQTT] ←', topic, msg);
+
+    if (topic === 'robot/vb') {
+      document.getElementById('vb').innerText = `VB: ${msg}`;
+      return;
+    }
+    if (topic === 'robot/eu') {
+      document.getElementById('eu').innerText = `EU: ${msg}`;
+      return;
+    }
+    if (topic === 'robot/battery') {
+      document.getElementById('battery').innerText = `Battery: ${msg}%`;
+      return;
+    }
+    if (topic === 'robot/keys') {
+      let keys;
+      try { keys = JSON.parse(msg); }
+      catch { return console.error('[MQTT] bad keys JSON'); }
+      document.getElementById('key-list').innerHTML =
+        '<ul>'+keys.map(k=>
+          `<li><button class="key-button" onclick="assignKeyLocation('${k}')">${k}</button></li>`
+        ).join('')+'</ul>';
+      return;
+    }
+    if (topic === 'robot/auto/key/locations') {
+      let locs;
+      try { locs = JSON.parse(msg); }
+      catch { return console.error('[MQTT] bad locs JSON'); }
+      console.log('[MQTT] got locations:', locs);
+      Object.entries(locs).forEach(([name, coord])=>{
+        savedCoords[name] = coord;
+      });
+      // update 4 UI slots
+      for (let i=1; i<=4; i++) {
+        const name = savedNames[i-1];
+        const el   = document.getElementById(`loc-name-${i}`);
+        if (!name) {
+          el.innerText = '—';
+        } else if (savedCoords[name]) {
+          const c = savedCoords[name];
+          el.innerText = `${name}: (x=${c.x.toFixed(2)}, y=${c.y.toFixed(2)}, θ=${c.theta.toFixed(2)} rad)`;
+        } else {
+          el.innerText = `${name}: (x=…, y=…, θ=…)`;
+        }
+      }
+    }
+  });
+
+  client.on('error', e => {
+    console.error('[MQTT] Error:', e);
+    document.getElementById('mqtt-status').innerText = 'MQTT: Error';
+  });
+  client.on('close', () => {
+    console.warn('[MQTT] Disconnected');
+    document.getElementById('mqtt-status').innerText = 'MQTT: Disconnected';
+  });
+
+  window.assignKeyLocation = name => {
+  console.log('[UI] assignKeyLocation()', name);
+  // always publish—bridge will look up or re-compute coords
+  pub('robot/auto/key/assign', name);
+    // 2) if brand-new, stick it into the next empty slot
+  let idx = savedNames.indexOf(name);
+  if (idx === -1 && savedNames.length < 4) {
+    savedNames.push(name);
+    idx = savedNames.length - 1;
+  }
+
+  // 3) only reset **that one** slot to placeholder
+  if (idx !== -1) {
+    const el = document.getElementById(`loc-name-${idx+1}`);
+    el.innerText = `${name}: (x=…, y=…, θ=…)`;
+  }
+};
+  document.getElementById('btn-assign-key').onclick = () => {
+    const n = document.getElementById('key-loc').value.trim();
+    if (n) assignKeyLocation(n);
+  };
+
+  // === Reset Locations ===
+  document.getElementById('btn-reset-locs').onclick = () => {
+    console.log('[UI] Reset Locations');
+    savedNames.length = 0;
+    Object.keys(savedCoords).forEach(k=>delete savedCoords[k]);
+    for (let i=1; i<=4; i++) {
+      document.getElementById(`loc-name-${i}`).innerText = '—';
     }
   };
 
-  document.getElementById('btn-assign-key').onclick = () => {
-    console.log('[UI] btn-assign-key clicked');
-    const v = document.getElementById('key-loc').value.trim();
-    if (v) assignKeyLocation(v);
-  };
-
-  // === Four Location Buttons ===
-  for (let i = 1; i <= 4; i++) {
+  // === Four Return Buttons ===
+  for (let i=1; i<=4; i++) {
     document.getElementById(`loc-btn-${i}`).onclick = () => {
       console.log(`[UI] loc-btn-${i} clicked`);
-      const name = savedNames[i - 1];
-      if (!name) {
-        return alert(`No location ${i} assigned`);
-      }
+      const name = savedNames[i-1];
+      if (!name)  return alert(`No location #${i} assigned`);
       const coord = savedCoords[name];
-      if (!coord) {
-        return alert(`Coordinates for "${name}" not yet known`);
-      }
+      if (!coord) return alert(`Coordinates for "${name}" unknown`);
       pub('robot/goto_keyloc', JSON.stringify(coord));
       console.log('[MQTT] goto_keyloc →', coord);
     };
   }
 
   // === UI Clock ===
-  setInterval(() => {
+  setInterval(()=>{
     const now = new Date();
     document.getElementById('time').innerText =
-      now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   }, 10000);
 
-  // === Arrow/PAD Controls ===
-  console.log('[UI] Initializing arrow/PAD controls...');
-  const commandMap = {
-    up: 'up', down: 'down', left: 'left', right: 'right',
-    stop: 'stop',
-    'up-left':'up-left', 'up-right':'up-right',
-    'down-left':'down-left','down-right':'down-right'
-  };
+  // === Arrow / PAD Controls ===
+  const cmdMap = { up:'up',down:'down',left:'left',right:'right',stop:'stop',
+                   'up-left':'up-left','up-right':'up-right',
+                   'down-left':'down-left','down-right':'down-right' };
   const arrowTopic = 'robot/manual/command';
   const activeKeys = new Set();
-  let movementInterval = null;
+  let mvInterval = null;
 
-  ['up','down','left','right'].forEach(dir => {
-    const btn = document.getElementById(dir);
-    if (!btn) return;
-    btn.onmousedown = () => { activeKeys.add(dir);  updateMovement(); };
-    btn.onmouseup   = btn.onmouseleave = () => { activeKeys.delete(dir); updateMovement(); };
+  ['up','down','left','right'].forEach(dir=>{
+    const b = document.getElementById(dir);
+    if (!b) return;
+    b.onmousedown = ()=>{activeKeys.add(dir); updateMv();};
+    b.onmouseup   = b.onmouseleave = ()=>{activeKeys.delete(dir); updateMv();};
   });
-
-  const keyMap = {
-    ArrowUp: 'up',    ArrowDown: 'down',
-    ArrowLeft: 'left',ArrowRight: 'right'
-  };
-  document.addEventListener('keydown', e => {
+  const keyMap = { ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right' };
+  document.addEventListener('keydown', e=>{
     const d = keyMap[e.key];
-    if (d && !activeKeys.has(d)) { activeKeys.add(d); updateMovement(); }
+    if (d && !activeKeys.has(d)) { activeKeys.add(d); updateMv(); }
   });
-  document.addEventListener('keyup', e => {
+  document.addEventListener('keyup', e=>{
     const d = keyMap[e.key];
-    if (d) { activeKeys.delete(d); updateMovement(); }
+    if (d) { activeKeys.delete(d); updateMv(); }
   });
 
-  function updateMovement() {
-    if (movementInterval) clearInterval(movementInterval);
-
-    if (activeKeys.size === 0) {
-      pub(arrowTopic, commandMap.stop);
-      document.querySelectorAll('.arrow.active').forEach(el => el.classList.remove('active'));
+  function updateMv() {
+    if (mvInterval) clearInterval(mvInterval);
+    if (activeKeys.size===0) {
+      pub(arrowTopic, cmdMap.stop);
+      document.querySelectorAll('.arrow.active')
+              .forEach(el=>el.classList.remove('active'));
       return;
     }
-
-    document.querySelectorAll('.arrow.active').forEach(el => el.classList.remove('active'));
-    activeKeys.forEach(d => document.getElementById(d).classList.add('active'));
-
-    sendMovement();
-    movementInterval = setInterval(sendMovement, 200);
+    document.querySelectorAll('.arrow.active')
+            .forEach(el=>el.classList.remove('active'));
+    activeKeys.forEach(d=>document.getElementById(d).classList.add('active'));
+    sendMv();
+    mvInterval = setInterval(sendMv, 200);
   }
 
-  function sendMovement() {
-    const has = d => activeKeys.has(d);
-    let cmd = commandMap.stop;
-    if (has('up') && has('left'))   cmd = commandMap['up-left'];
-    else if (has('up') && has('right'))  cmd = commandMap['up-right'];
-    else if (has('down') && has('left')) cmd = commandMap['down-left'];
-    else if (has('down') && has('right'))cmd = commandMap['down-right'];
-    else if (has('up')) cmd = commandMap.up;
-    else if (has('down')) cmd = commandMap.down;
-    else if (has('left')) cmd = commandMap.left;
-    else if (has('right'))cmd = commandMap.right;
-
+  function sendMv() {
+    const has = d=>activeKeys.has(d);
+    let cmd = cmdMap.stop;
+    if      (has('up')&&has('left'))   cmd = cmdMap['up-left'];
+    else if (has('up')&&has('right'))  cmd = cmdMap['up-right'];
+    else if (has('down')&&has('left')) cmd = cmdMap['down-left'];
+    else if (has('down')&&has('right'))cmd = cmdMap['down-right'];
+    else if (has('up'))    cmd=cmdMap.up;
+    else if (has('down'))  cmd=cmdMap.down;
+    else if (has('left'))  cmd=cmdMap.left;
+    else if (has('right')) cmd=cmdMap.right;
     pub(arrowTopic, cmd);
   }
 
-  // === Other Button Mappings ===
-  console.log('[UI] Binding mode & test buttons...');
+  // === Other Buttons ===
   [
-    { id:'btn-manual',      topic:'robot/mode', payload:'manual' },
-    { id:'btn-autonomous',  topic:'robot/mode', payload:'autonomous' },
-    { id:'btn-test',        topic:'robot/mode', payload:'test' },
-    { id:'btn-flash-led',   topic:'robot/led',  payload:'flash' },
-    { id:'btn-enable-cv',   topic:'robot/cv',   payload:'enable' },
-    { id:'btn-disable-cv',  topic:'robot/cv',   payload:'disable' },
-    { id:'btn-follow',      topic:'robot/auto', payload:'follow' }
-  ].forEach(({id,topic,payload}) => {
+    {id:'btn-manual',    topic:'robot/mode', payload:'manual'},
+    {id:'btn-autonomous',topic:'robot/mode', payload:'autonomous'},
+    {id:'btn-test',      topic:'robot/mode', payload:'test'},
+    {id:'btn-flash-led', topic:'robot/led',  payload:'flash'},
+    {id:'btn-enable-cv', topic:'robot/cv',   payload:'enable'},
+    {id:'btn-disable-cv',topic:'robot/cv',   payload:'disable'},
+    {id:'btn-follow',    topic:'robot/auto', payload:'follow'}
+  ].forEach(({id,topic,payload})=>{
     const b = document.getElementById(id);
     if (!b) return;
-    b.onclick = () => pub(topic, payload);
+    b.onclick = ()=> pub(topic, payload);
   });
 
-  // === PID Form Handling ===
-  console.log('[UI] Binding PID forms...');
-  const formInner = document.getElementById('form-inner');
-  if (formInner) formInner.onsubmit = e => {
-    e.preventDefault();
-    const d = new FormData(e.target);
-    pub('robot/pid/inner', JSON.stringify({
-      pg:+d.get('pg'), dg:+d.get('dg'),
-      ig:+d.get('ig'), sp:+d.get('sp')
-    }));
-  };
-
-  const formOuter = document.getElementById('form-outer');
-  if (formOuter) formOuter.onsubmit = e => {
-    e.preventDefault();
-    const d = new FormData(e.target);
-    pub('robot/pid/outer', JSON.stringify({
-      pg:+d.get('pg'), dg:+d.get('dg'),
-      ig:+d.get('ig'), sp:+d.get('sp'),
-      rot:+d.get('rot')
-    }));
-  };
-
-  // === Voice Recognition ===
-  console.log('[UI] Initializing voice recognition...');
-  const recognition = new window.webkitSpeechRecognition();
-  recognition.lang = 'en-US';
-  recognition.continuous = false;
-
-  recognition.onstart = () => console.log('[Voice] Started listening');
-  recognition.onend   = () => console.log('[Voice] Stopped listening');
-  recognition.onerror = err => console.error('[Voice] Error:', err);
-
-  const startBtns = [
-    document.getElementById('start-voice'),
-    document.getElementById('start-voice-assign')
-  ].filter(Boolean);
-
-  startBtns.forEach(btn => {
-    btn.onmousedown = () => {
-      console.log('[Voice] button DOWN → start recognition');
-      recognition.start();
-    };
-    btn.onmouseup = () => {
-      console.log('[Voice] button UP → stop recognition');
-      recognition.stop();
-    };
-  });
-
-  recognition.onresult = event => {
-    const transcript = event.results[0][0].transcript;
-    console.log('[Voice] Transcript:', transcript);
-    sendToChatGPT(transcript);
-  };
-
-  function sendToChatGPT(commandText) {
-    console.log('[Voice] Sending to server:', commandText);
-    fetch('http://127.0.0.1:5001/interpret', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({command:commandText})
-    })
-      .then(r => r.json())
-      .then(data => {
-        const cmd = (data.result||'').trim().toLowerCase();
-        console.log('[Voice] Interpreted command:', cmd);
-        if (!client.connected) {
-          return alert('MQTT not connected');
-        }
-        if (['follow','return','stop'].includes(cmd)) {
-          pub('robot/auto', cmd);
-        } else if (['manual','autonomous'].includes(cmd)) {
-          pub('robot/mode', cmd);
-        } else {
-          alert('Unrecognized voice command');
-        }
-      })
-      .catch(err => {
-        console.error('[Voice] sendToChatGPT error:', err);
-        alert('Voice interpretation error');
+  // === PID Forms ===
+  ['form-inner','form-outer'].forEach(formId=>{
+    const f = document.getElementById(formId);
+    if (!f) return;
+    f.onsubmit = e=>{
+      e.preventDefault();
+      const d = new FormData(f);
+      const obj = {};
+      ['pg','dg','ig','sp','rot'].forEach(k=>{
+        if (d.has(k)) obj[k] = +d.get(k);
       });
+      const topic = formId==='form-inner' ? 'robot/pid/inner' : 'robot/pid/outer';
+      pub(topic, JSON.stringify(obj));
+    };
+  });
+
+  // === Voice Control ===
+  console.log('[Voice] initializing');
+  const recog = new window.webkitSpeechRecognition();
+  recog.lang = 'en-US'; recog.continuous = false;
+  recog.onstart = ()=>console.log('[Voice] started');
+  recog.onend   = ()=>console.log('[Voice] ended');
+  recog.onerror = err=>console.error('[Voice] error',err);
+
+  const vb = document.getElementById('start-voice');
+  if (vb) {
+    vb.onmousedown = ()=>recog.start();
+    vb.onmouseup   = ()=>recog.stop();
   }
-});  // end DOMContentLoaded
+  recog.onresult = e=>{
+    const txt = e.results[0][0].transcript;
+    console.log('[Voice] transcript',txt);
+    fetch('http://127.0.0.1:5001/interpret',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({command:txt})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+      const c = (d.result||'').trim().toLowerCase();
+      console.log('[Voice] interpreted',c);
+      if (!client.connected) return alert('MQTT not connected');
+      if (['follow','return','stop'].includes(c)) pub('robot/auto',c);
+      else if (['manual','autonomous'].includes(c)) pub('robot/mode',c);
+      else alert('Unrecognized');
+    })
+    .catch(err=>{
+      console.error('[Voice] send failed',err);
+      alert('Voice error');
+    });
+  };
+
+});
