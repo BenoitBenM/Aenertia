@@ -236,7 +236,6 @@ def save_current_location(client):
 
 
 def nav2_drive_from_cmd_vel():
-    rclpy.init()
     node = rclpy.create_node('cmd_vel_listener')
 
     def callback(msg: Twist):
