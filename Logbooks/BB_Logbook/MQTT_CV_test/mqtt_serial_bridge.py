@@ -283,7 +283,7 @@ def esp_read(client):
     Read serial lines; when a 'PM:' message arrives, parse VB/EU,
     log to CSV, compute %, and publish on 'robot/battery'.
     """
-    global ser, mqtt_client
+    global ser
 
     # ensure CSV exists
     initialize_csv_file()
