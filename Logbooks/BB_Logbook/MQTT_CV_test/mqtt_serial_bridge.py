@@ -309,7 +309,7 @@ def main():
     #Telemetry loop
     global ser
     global SERIAL_PORT
-    threading.Thread(target=start_web, daemon=True).start()
+    # threading.Thread(target=start_web, daemon=True).start()
     for port in SERIAL_PORT:
         try:
             ser = serial.Serial(port, baud_rate, timeout=1)
