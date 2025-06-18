@@ -24,3 +24,9 @@ Permanent
 ```bash
 sudo systemctl set-default graphical.target
 ```
+## Power saving
+
+```bash
+./low_power_setup.sh
+nice -n 19 python3 script.py
+```
