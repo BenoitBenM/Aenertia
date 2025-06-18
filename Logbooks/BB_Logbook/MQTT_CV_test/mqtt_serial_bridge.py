@@ -2,7 +2,8 @@ import paho.mqtt.client as mqtt
 import serial
 import threading # Threading is a library that allows us to run other tasks that the current one in the background
 from time import sleep
-from Advanced_CV.pose_detection import pose_detection, send_frame
+from Advanced_CV.pose_detection import pose_detection
+#, send_frame
 import cv2
 from flask import Flask, Response, send_from_directory
 import json
@@ -15,7 +16,7 @@ from EnergyCalculation import (
     append_to_csv,
     calculate_percentage
 )
-
+import multiprocessing
 import math
 import tf2_ros
 import rclpy
@@ -25,6 +26,10 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped
+
 
 
 #Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
@@ -36,31 +41,39 @@ SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/d
 baud_rate = 115200
 
 #global variables
-follow_mode = False
 manual_mode = False
 payload = "stop"
 ser = None
 mode = "manual"
-gv.HumanDetected = False
-gv.offset = 0
+#gv.follow_mode = False
+#gv.HumanDetected = False
+#gv.offset = 0
 
-# FLASK APP SETUP
-app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
+key_locations = {}
 
-@app.route('/')
-def index():
-    return send_from_directory('static', 'index.html')
+GOAL_TOLERANCE = 0.15  # meters
+ANGLE_TOLERANCE = 0.1  # radians
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(
-        send_frame(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+# Store last known position
+current_pose = {'x': 0.0, 'y': 0.0, 'theta': 0.0}
 
-def start_web():
-    """Runs the Flask server for static files + MJPEG stream."""
-    app.run(host='0.0.0.0', port=8001, threaded=True)
+# # FLASK APP SETUP
+# app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
+
+# @app.route('/')
+# def index():
+#     return send_from_directory('static', 'index.html')
+
+# @app.route('/video_feed')
+# def video_feed():
+#     return Response(
+#         send_frame(),
+#         mimetype='multipart/x-mixed-replace; boundary=frame'
+#     )
+
+# def start_web():
+#     """Runs the Flask server for static files + MJPEG stream."""
+#     app.run(host='0.0.0.0', port=8001, threaded=True)
 
 
 
@@ -95,24 +108,25 @@ def manual_control():
 def follow_me():
     gv.HumanDetected
     gv.offset
-    print(gv.HumanDetected)
-    while follow_mode:
-        print(gv.HumanDetected)
+    threading.Thread(target=pose_detection, daemon=True).start() #To fix this we use threading. Threading isolates the code we target and procceeds zith the rest of the code.
+    while gv.follow_mode:
         print(gv.offset)
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
-            if abs(gv.offset) < 420: 
+            if abs(gv.offset) < 320*0.62:
                 send_2_esp("forward")
-            elif 420 <= gv.offset:
+            elif 320*0.62 <= gv.offset:
                 send_2_esp("forwardANDright")
-            elif -420 >= gv.offset:
+                
+            elif -320*0.62 >= gv.offset:
                 send_2_esp("forwardANDleft")
+
             else: 
                 send_2_esp("stop")
         else:
             send_2_esp("stop")
         
-        sleep(0.1)
+        sleep(0.05)
 
 
 class PoseRecorder(Node):
@@ -144,55 +158,131 @@ class PoseRecorder(Node):
             self.get_logger().error(f'TF error: {str(e)}')
             return None
 
+def amcl_callback(msg):
+    global current_pose
+    current_pose['x'] = msg.pose.pose.position.x
+    current_pose['y'] = msg.pose.pose.position.y
+
+    q = msg.pose.pose.orientation
+    siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+    cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+    current_pose['theta'] = math.atan2(siny_cosp, cosy_cosp)
+
+def has_reached_goal(goal):
+    dx = goal['x'] - current_pose['x']
+    dy = goal['y'] - current_pose['y']
+    dtheta = abs(goal['theta'] - current_pose['theta'])
+
+    dist = math.hypot(dx, dy)
+    return dist < GOAL_TOLERANCE and dtheta < ANGLE_TOLERANCE
+
 
 def gotoKeyLocation(pose_dict):
     rclpy.init()
     node = rclpy.create_node('goto_key_location')
-    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
 
+    # 1. Publier la pose cible
+    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
     msg = PoseStamped()
     msg.header.frame_id = "map"
     msg.pose.position.x = pose_dict['x']
     msg.pose.position.y = pose_dict['y']
     msg.pose.position.z = 0.0
-
     theta = pose_dict['theta']
     msg.pose.orientation.z = math.sin(theta / 2)
     msg.pose.orientation.w = math.cos(theta / 2)
-
     pub.publish(msg)
-    print(f"Pose sent to Nav2 : {pose_dict}")
+    print(f"[NAV2] Pose sent to Nav2: {pose_dict}")
 
-    rclpy.spin_once(node, timeout_sec=0.5)
-    node.destroy_node()
-    rclpy.shutdown()
+    # 2. Lancer l'écoute de /cmd_vel dans un process séparé
+    drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
+    drive_proc.start()
+
+    # 3. Souscrire à /amcl_pose pour connaître la position en temps réel
+    sub = node.create_subscription(
+        PoseWithCovarianceStamped,
+        '/amcl_pose',
+        amcl_callback,
+        10
+    )
+
+    # 4. Boucle de vérification : est-ce qu’on a atteint l’objectif ?
+    try:
+        while rclpy.ok():
+            rclpy.spin_once(node, timeout_sec=0.2)
+            if has_reached_goal(pose_dict):
+                print("[NAV2] Goal reached!")
+                break
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
-def save_current_location(mqtt_client):
+
+def save_current_location(client):
     rclpy.init()
     node = PoseRecorder()
     rclpy.spin_once(node, timeout_sec=1.0)
 
     pose = node.get_current_pose()
     if pose is not None:
-        print(f"✅ Position enregistrée : {pose}")
-        mqtt_client.publish("telemetry/saved_pose", json.dumps(pose))
+        print(f"Position enregistrée : {pose}")
+        client.publish("telemetry/saved_pose", json.dumps(pose))
     else:
         print("Cant save location.")
-        mqtt_client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
+        client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
 
     node.destroy_node()
     rclpy.shutdown()
 
 
+def nav2_drive_from_cmd_vel():
+    rclpy.init()
+    node = rclpy.create_node('cmd_vel_listener')
+
+    def callback(msg: Twist):
+        linear = msg.linear.x
+        angular = msg.angular.z
+
+        # Simple thresholding to determine direction
+        if linear > 0.1 and abs(angular) < 0.1:
+            send_2_esp("forward")
+        elif linear < -0.1 and abs(angular) < 0.1:
+            send_2_esp("backward")
+        elif angular > 0.1 and abs(linear) < 0.1:
+            send_2_esp("right")
+        elif angular < -0.1 and abs(linear) < 0.1:
+            send_2_esp("left")
+        elif linear > 0.1 and angular > 0.1:
+            send_2_esp("forwardANDright")
+        elif linear > 0.1 and angular < -0.1:
+            send_2_esp("forwardANDleft")
+        elif linear < -0.1 and angular > 0.1:
+            send_2_esp("backwardANDright")
+        elif linear < -0.1 and angular < -0.1:
+            send_2_esp("backwardANDleft")
+        else:
+            send_2_esp("stop")
+    # Subscribe to /cmd_vel
+    sub = node.create_subscription(Twist, '/cmd_vel', callback, 10)
+
+    try:
+        print("[NAV2] Listening to /cmd_vel...")
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
 # ################################################################## TELEMETRY ##################################################################
 
-def esp_read():
+def esp_read(client):
     """
     Read serial lines; when a 'PM:' message arrives, parse VB/EU,
     log to CSV, compute %, and publish on 'robot/battery'.
     """
-    global ser, mqtt_client
+    global ser
 
     # ensure CSV exists
     initialize_csv_file()
@@ -217,20 +307,20 @@ def esp_read():
                 # 1) log raw values
                 append_to_csv(VB, EU)
                 
-                mqtt_client.publish('robot/vb', str(VB))
-                mqtt_client.publish('robot/eu', str(EU))
+                client.publish('robot/vb', str(VB))
+                client.publish('robot/eu', str(EU))
 
                 # 2) compute battery percentage
                 pct, Et = calculate_percentage(VB, EU)
                 print(f"[Battery] {pct}%")
 
                 # 3) publish to MQTT
-                mqtt_client.publish('robot/battery', str(pct))
+                client.publish('robot/battery', str(pct))
 
             except Exception as e:
                 print("[ESP] Error parsing PM:", e)
 
-        sleep(0.05)
+        sleep(0.5)
 
 
 def on_connect(client, userdata, flags, rc):
@@ -241,17 +331,18 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("robot/mode")
     client.subscribe("robot/auto")
     client.subscribe("robot/manual/command")
+    client.subscribe("robot/auto/key/assign")
+    client.publish("robot/auto/key/locations", json.dumps(key_locations))
 
-#     # Run the CV pose detection in the background
-    threading.Thread(target=pose_detection, daemon=True).start() #To fix this we use threading. Threading isolates the code we target and procceeds zith the rest of the code.
-    threading.Thread(target=esp_read, daemon=True).start() #Continuously read value from ESP
+#     # Removed the thread for continuous CV and put it in follow mode
+    threading.Thread(target=esp_read, args=(client,), daemon=True).start() #Continuously read value from ESP
 
 def on_message(client, userdata, msg):
     #global cv_enabled
     global mode
-    global follow_mode
     global manual_mode
-    global payload
+    global payload    
+    gv.follow_mode
     gv.HumanDetected
     gv.offset
 
@@ -266,7 +357,7 @@ def on_message(client, userdata, msg):
 
     # Check if the robot should stop following
     if mode != "autonomous" or payload == "GoToKeyLocation":  # This should be GoToKeyLocation Instead of return
-        follow_mode = False
+        gv.follow_mode = False
         print("follow mode OFF")
 
     # Manual mode code
@@ -282,12 +373,10 @@ def on_message(client, userdata, msg):
 
             # In follow mode the robot follows the person around
             if payload == "follow":  
-                if follow_mode == False:
-                    follow_mode = True
+                if gv.follow_mode == False:
+                    gv.follow_mode = True
                     threading.Thread(target=follow_me, daemon=True).start() # Runs follow_me unless follow_mode is disabled
 
-            elif payload == "return": # This should be GoToKeyLocation Instead of return 
-                gotoKeyLocation()
 
             elif payload == "stop": # To be implemented later
                 send_2_esp("stop")
@@ -302,13 +391,29 @@ def on_message(client, userdata, msg):
         except Exception as e:
             print(f"Invalid pose payload: {e}")
 
+    elif topic == "robot/auto/key/assign":
+        key_name = payload.strip()
+        rclpy.init()
+        node = PoseRecorder()
+        rclpy.spin_once(node, timeout_sec=1.0)
+        pose = node.get_current_pose()
+        if pose:
+            key_locations[key_name] = pose
+            print(f"[KeyLocation] Saved {key_name} → {pose}")
+            client.publish("robot/auto/key/locations", json.dumps(key_locations))
+        else:
+            print(f"[KeyLocation] Could not get pose for '{key_name}'")
+        node.destroy_node()
+        rclpy.shutdown()
+
+
 
 def main():
     #Robot function
     #Telemetry loop
     global ser
     global SERIAL_PORT
-    threading.Thread(target=start_web, daemon=True).start()
+    # threading.Thread(target=start_web, daemon=True).start()
     for port in SERIAL_PORT:
         try:
             ser = serial.Serial(port, baud_rate, timeout=1)
