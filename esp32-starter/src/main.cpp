@@ -53,7 +53,7 @@ float targetYaw = 0;  // 希望的角度，或者从遥控器获得的转动指�
 
 float lastAcceleration=0.0;
 
-float speed_max = 12;
+float speed_max = 14;
 float yaw_max = 0.04;
 
 float targetSpeed = 0;
