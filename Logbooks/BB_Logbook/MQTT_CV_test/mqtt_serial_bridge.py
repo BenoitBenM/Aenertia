@@ -105,8 +105,11 @@ def follow_me():
                 send_2_esp("forward")
             elif 420 <= gv.offset:
                 send_2_esp("forwardANDright")
+                sleep(0.1)
             elif -420 >= gv.offset:
                 send_2_esp("forwardANDleft")
+                sleep(0.1)
+
             else: 
                 send_2_esp("stop")
         else:
