@@ -53,9 +53,9 @@ def pose_detection():
 #    # print(f"Camera configured at: {cfg[0]}×{cfg[1]}")
 
     cam = cv2.VideoCapture(0)  # 0 = /dev/video0, change if needed
-    #cam.set(cv2.CAP_PROP_FPS, 10)
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    cam.set(cv2.CAP_PROP_FPS, 10)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920/2)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080/2)
     time.sleep(2)
     
     print("Camera Started")
@@ -67,7 +67,7 @@ def pose_detection():
         # 3) Capture & wrap frame
         ret, frame_bgr = cam.read()
         if not ret:
-            print("⚠️ Failed to grab frame from USB camera")
+            print("Failed to grab frame from USB camera")
             continue
 	
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
@@ -80,7 +80,7 @@ def pose_detection():
         try:
             result = landmarker.detect_for_video(mp_image, timestamp_ms)
         except Exception as e:
-            print("⚠️ Inference error:", e)
+            print("Inference error:", e)
             continue
 
             # 5) Pull out only hips/knees/ankles from the FIRST pose detection ---

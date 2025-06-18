@@ -42,7 +42,7 @@ float kp_o = -0.003;
 float ki_o = -0.00007;
 float kd_o = 0.0;
 
-float kp_turn = 100 ;
+float kp_turn = 125 ;
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
@@ -53,8 +53,8 @@ float targetYaw = 0;  // 希望的角度，或者从遥控器获得的转动指�
 
 float lastAcceleration=0.0;
 
-float speed_max = 10;
-float yaw_max = 0.1;
+float speed_max = 12;
+float yaw_max = 0.04;
 
 float targetSpeed = 0;
 float actualSpeed = 0;
@@ -404,24 +404,24 @@ void loop()
     }
     else if (command == "left") {
       targetSpeed = 0;
-      targetYaw = yaw_max;
+      targetYaw = yaw_max*1.7;
       Serial.println("left");
     }
     else if (command == "right") {
       targetSpeed = 0;
-      targetYaw = -yaw_max;
+      targetYaw = -yaw_max*1.7;
       Serial.println("right");
     }
 
     else if(command == "forwardANDleft") {
       targetSpeed = speed_max;
-      targetYaw = yaw_max;
+      targetYaw = yaw_max*0.45;
       Serial.println("Forward and left");
 
     }
     else if (command == "forwardANDright") {
       targetSpeed = speed_max;
-      targetYaw = -yaw_max;
+      targetYaw = -yaw_max*0.45;
       Serial.println("Forward and right");
     }
     else if (command == "backwardANDleft") {
