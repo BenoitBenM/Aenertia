@@ -54,7 +54,7 @@ def pose_detection():
 
     cam = cv2.VideoCapture(0)  # 0 = /dev/video0, change if needed
     cam.set(cv2.CAP_PROP_FPS, 10)
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1980)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
     time.sleep(2)
     
