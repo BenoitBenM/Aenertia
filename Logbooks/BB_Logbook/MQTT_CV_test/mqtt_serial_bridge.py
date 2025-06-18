@@ -1,153 +1,142 @@
 #!/usr/bin/env python3
-import os
-import json
-import threading
-import serial
+import threading, serial, json, math
 from time import sleep
 
-import math
 import rclpy
 from rclpy.node import Node
+from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
+
+from tf2_ros import Buffer, TransformListener, TransformException
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped
+from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
-from nav2_msgs.action import NavigateToPose
-from nav_msgs.msg import Odometry
 import paho.mqtt.client as mqtt
 
-# SERIAL CONFIG
-SERIAL_PORTS = [
-    "/dev/esp32", "/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyUSB2",
-]
-BAUD_RATE = 115200
+# —— CONFIG —— 
+SERIAL_PORTS = [ "/dev/esp32", "/dev/ttyUSB0", "/dev/ttyUSB1" ]
+BAUD_RATE    = 115200
 
-def calculate_percentage(VB, EU):
-    # Dummy implementation; replace with your real function
-    # VB = battery voltage, EU = energy used
-    pct = max(0, min(100, int((EU / VB) * 100)))
-    return pct, None
+MQTT_BROKER  = "localhost"
+MQTT_PORT    = 1883
 
 class RobotBridge(Node):
     def __init__(self):
         super().__init__('robot_bridge')
 
-        # --- Serial port for ESP32 ---
-        self.ser = self._init_serial()
-        if not self.ser:
-            self.get_logger().error("No serial port opened; ESP32 commands disabled")
+        # --- Serial to ESP32 ---
+        self.ser = self._try_serial()
 
-        # --- MQTT client ---
-        self.mqtt_client = mqtt.Client()
-        self.mqtt_client.on_connect = self._on_mqtt_connect
-        self.mqtt_client.on_message = self._on_mqtt_message
-
-        # state
-        self.manual_mode = False
-        self.follow_mode = False
-        self.key_locations = {}
-        self.cmd_vel_listener_running = False
+        # --- TF2 listener on map→base_link ---
+        self.tf_buffer   = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # --- Nav2 action client ---
         self.nav2_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
-        # --- Subscribe to AMCL for current pose ---
-        self.current_pose = {'x':0.0,'y':0.0,'theta':0.0}
-        self.create_subscription(
-            PoseWithCovarianceStamped,
-            '/amcl_pose',
-            self._amcl_callback,
-            10
-        )
+        # --- MQTT client ---
+        self.mqtt = mqtt.Client()
+        self.mqtt.on_connect = self._on_mqtt_connect
+        self.mqtt.on_message = self._on_mqtt_message
 
-        # --- Threaded MQTT & Serial readers ---
-        threading.Thread(target=self._start_mqtt, daemon=True).start()
-        threading.Thread(target=self._serial_reader, daemon=True).start()
+        # key_name → {x,y,theta}
+        self.key_locations = {}
 
-    def _init_serial(self):
-        for p in SERIAL_PORTS:
-            try:
-                s = serial.Serial(p, BAUD_RATE, timeout=1)
-                self.get_logger().info(f"Serial opened on {p}")
-                return s
-            except serial.SerialException:
-                continue
-        return None
-
-    def _serial_reader(self):
-        """Read battery telemetry lines `PM: {...}` from ESP32 and publish via MQTT."""
-        while True:
-            if not self.ser or not self.ser.is_open:
-                sleep(0.5)
-                continue
-            try:
-                line = self.ser.readline().decode('utf8','ignore').strip()
-            except serial.SerialException:
-                sleep(1.0)
-                continue
-
-            if line.startswith("PM:"):
-                try:
-                    data = json.loads(line.split(None,1)[1])
-                    VB, EU = data['VB'], data['EU']
-                    pct, _ = calculate_percentage(VB, EU)
-                    self.mqtt_client.publish('robot/vb', str(VB))
-                    self.mqtt_client.publish('robot/eu', str(EU))
-                    self.mqtt_client.publish('robot/battery', str(pct))
-                except Exception as e:
-                    self.get_logger().warn(f"Serial parse error: {e}")
-            sleep(0.1)
-
-    def _start_mqtt(self):
-        self.mqtt_client.connect("localhost", 1883, 60)
-        self.mqtt_client.loop_forever()
-
-    def _on_mqtt_connect(self, client, userdata, flags, rc):
-        self.get_logger().info("MQTT connected")
-        for topic in [
-            'robot/mode',
-            'robot/manual/command',
-            'robot/auto',
-            'robot/auto/key/assign',
-            'robot/goto_keyloc'
-        ]:
-            client.subscribe(topic)
-
-    def _on_mqtt_message(self, client, userdata, msg):
-        payload = msg.payload.decode()
-        if msg.topic == 'robot/mode':
-            self._handle_mode(payload)
-        elif msg.topic == 'robot/manual/command':
-            self._handle_manual(payload)
-        elif msg.topic == 'robot/auto':
-            self._handle_auto(payload)
-        elif msg.topic == 'robot/auto/key/assign':
-            self._handle_assign(payload)
-        elif msg.topic == 'robot/goto_keyloc':
-            self._handle_goto_keyloc(payload)
-
-    # --- Handlers ---
-    def _handle_mode(self, payload):
-        self.get_logger().info(f"Mode set → {payload}")
-        self.manual_mode = (payload == 'manual')
+        # mode flags
+        self.manual_mode = False
         self.follow_mode = False
 
-    def _handle_manual(self, payload):
-        if not self.manual_mode or not self.ser: return
-        cmd_map = {
+        # command maps
+        self._cmd_map = {
             'up':'forward','down':'backward','left':'left','right':'right',
             'up-left':'forwardANDleft','up-right':'forwardANDright',
             'down-left':'backwardANDleft','down-right':'backwardANDright',
             'stop':'stop'
         }
-        cmd = cmd_map.get(payload, 'stop')
-        self.ser.write((cmd+"\n").encode())
 
-    def _handle_auto(self, payload):
-        if payload == 'follow':
+        # topics → handler methods
+        self._handlers = {
+            'robot/mode':           self._handle_mode,
+            'robot/manual/command': self._handle_manual,
+            'robot/auto':           self._handle_auto,
+            'robot/auto/key/assign':self._handle_assign,
+            'robot/goto_keyloc':    self._handle_goto_keyloc,
+        }
+
+        # — start background threads —
+        threading.Thread(target=self._serial_reader, daemon=True).start()
+        threading.Thread(target=self._mqtt_loop,     daemon=True).start()
+        # we also subscribe to /cmd_vel for Nav2 driving
+        self.create_subscription(Twist, '/cmd_vel', self._on_cmd_vel, 10)
+
+    # —— Serial port init ——
+    def _try_serial(self):
+        for p in SERIAL_PORTS:
+            try:
+                ser = serial.Serial(p, BAUD_RATE, timeout=1)
+                self.get_logger().info(f"Serial opened on {p}")
+                return ser
+            except serial.SerialException:
+                continue
+        self.get_logger().warn("No serial port opened")
+        return None
+
+    # —— Read battery from ESP → MQTT —
+    def _serial_reader(self):
+        while True:
+            if not self.ser or not self.ser.is_open:
+                sleep(0.5)
+                continue
+            line = self.ser.readline().decode('utf8','ignore').strip()
+            if line.startswith("PM:"):
+                try:
+                    data = json.loads(line.split(None,1)[1])
+                    VB, EU = data['VB'], data['EU']
+                    pct, _ = calculate_percentage(VB, EU)
+                    self.mqtt.publish('robot/vb',  str(VB))
+                    self.mqtt.publish('robot/eu',  str(EU))
+                    self.mqtt.publish('robot/battery', f"{pct}")
+                except Exception as e:
+                    self.get_logger().warn(f"Bad telemetry: {e}")
+            sleep(0.1)
+
+    # —— MQTT loop ——
+    def _mqtt_loop(self):
+        self.mqtt.connect(MQTT_BROKER, MQTT_PORT, 60)
+        self.mqtt.loop_forever()
+
+    def _on_mqtt_connect(self, client, userdata, flags, rc):
+        self.get_logger().info("MQTT connected")
+        for t in self._handlers:
+            client.subscribe(t)
+
+    def _on_mqtt_message(self, client, userdata, msg):
+        h = self._handlers.get(msg.topic)
+        if h:
+            payload = msg.payload.decode()
+            h(payload)
+        else:
+            self.get_logger().warn(f"No handler for {msg.topic}")
+
+    # —— MODE handlers ——
+    def _handle_mode(self, m):
+        self.get_logger().info(f"Mode → {m}")
+        self.manual_mode = (m=='manual')
+        self.follow_mode = False
+
+    def _handle_manual(self, cmd):
+        if not self.manual_mode: return
+        to_send = self._cmd_map.get(cmd, 'stop')
+        if self.ser and self.ser.is_open:
+            self.ser.write((to_send+"\n").encode())
+
+    def _handle_auto(self, cmd):
+        if cmd=='follow':
             self.follow_mode = True
             threading.Thread(target=self._follow_loop, daemon=True).start()
-        elif payload == 'stop':
+        else:
             self.follow_mode = False
 
     def _follow_loop(self):
@@ -156,107 +145,96 @@ class RobotBridge(Node):
         while self.follow_mode:
             if gv.HumanDetected:
                 off = gv.offset
-                if abs(off) < 50:
-                    cmd = 'forward'
-                elif off > 0:
-                    cmd = 'forwardANDright'
-                else:
-                    cmd = 'forwardANDleft'
+                if abs(off)<50: 	next='forward'
+                elif off>0:	next='forwardANDright'
+                else:		next='forwardANDleft'
             else:
-                cmd = 'stop'
-            if self.ser:
-                self.ser.write((cmd+"\n").encode())
+                next='stop'
+            if self.ser and self.ser.is_open:
+                self.ser.write((next+"\n").encode())
             sleep(0.1)
 
+    # —— TF helper ——
+    def _get_pose_from_tf(self):
+        now = rclpy.time.Time()
+        try:
+            t = self.tf_buffer.lookup_transform(
+                'map','base_link', now,
+                timeout=Duration(seconds=1.0)
+            )
+            x = t.transform.translation.x
+            y = t.transform.translation.y
+            q = t.transform.rotation
+            theta = math.atan2(2*(q.w*q.z+q.x*q.y),
+                               1-2*(q.y*q.y+q.z*q.z))
+            return {'x':x,'y':y,'theta':theta}
+        except TransformException as e:
+            self.get_logger().warn(f"TF failed: {e}")
+            return None
+
+    # —— Key assignment ——
     def _handle_assign(self, name):
-        p = self.current_pose.copy()
+        p = self._get_pose_from_tf()
+        if not p:
+            self.get_logger().error("Cannot assign key: TF unavailable")
+            return
         self.key_locations[name] = p
-        self.mqtt_client.publish(
-            'robot/auto/key/locations',
-            json.dumps(self.key_locations)
-        )
+        self.mqtt.publish('robot/auto/key/locations', json.dumps(self.key_locations))
         self.get_logger().info(f"Key '{name}' → {p}")
 
+    # —— Go-to-KeyLocation → Nav2 ——
     def _handle_goto_keyloc(self, payload):
         try:
-            goal = json.loads(payload)
-        except json.JSONDecodeError:
-            self.get_logger().error("Invalid JSON for goto_keyloc")
+            pose = json.loads(payload)
+        except:
+            self.get_logger().error("Bad JSON for goto_keyloc")
             return
 
         if not self.nav2_client.wait_for_server(timeout_sec=2.0):
-            self.get_logger().error("Nav2 action server not available")
+            self.get_logger().error("Nav2 action server not ready")
             return
 
-        goal_msg = NavigateToPose.Goal()
-        goal_msg.pose.header.frame_id = 'map'
-        goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
-        goal_msg.pose.pose.position.x = goal['x']
-        goal_msg.pose.pose.position.y = goal['y']
-        goal_msg.pose.pose.orientation.z = math.sin(goal['theta']/2.0)
-        goal_msg.pose.pose.orientation.w = math.cos(goal['theta']/2.0)
+        goal = NavigateToPose.Goal()
+        goal.pose.header.frame_id = 'map'
+        goal.pose.header.stamp    = self.get_clock().now().to_msg()
+        goal.pose.pose.position.x = pose['x']
+        goal.pose.pose.position.y = pose['y']
+        goal.pose.pose.orientation.z = math.sin(pose['theta']/2.0)
+        goal.pose.pose.orientation.w = math.cos(pose['theta']/2.0)
 
-        self.get_logger().info(f"[NAV2] Sending goal → {goal}")
-        future = self.nav2_client.send_goal_async(
-            goal_msg,
-            feedback_callback=self._nav2_feedback
-        )
-        future.add_done_callback(self._nav2_response)
+        self.get_logger().info(f"→ Nav2 goal {pose}")
+        fut = self.nav2_client.send_goal_async(goal, feedback_callback=self._nav2_fb)
+        fut.add_done_callback(self._nav2_done)
 
-        # spin up cmd_vel listener once:
-        threading.Thread(target=self._nav2_cmd_vel_listener, daemon=True).start()
+    def _nav2_fb(self, feedback):
+        # optional: forward to MQTT or just log
+        self.get_logger().debug(f"Nav2 fb: {feedback}")
 
-    def _nav2_feedback(self, feedback_msg):
-        # optional: forward feedback via MQTT or log
-        self.get_logger().debug(f"Nav2 fb: {feedback_msg.feedback.current_pose.pose}")
-
-    def _nav2_response(self, future):
+    def _nav2_done(self, future):
         res = future.result().result
-        status = future.result().status
-        if status == NavigateToPose.Result().SUCCESS:
-            self.get_logger().info("[NAV2] Goal reached")
+        stat= future.result().status
+        if stat==4:
+            self.get_logger().info("[NAV2] Arrived")
         else:
-            self.get_logger().warn(f"[NAV2] Failed with status {status}")
+            self.get_logger().warn(f"[NAV2] Failed ({stat})")
 
-    def _nav2_cmd_vel_listener(self):
-        if self.cmd_vel_listener_running:
-            return
-        self.cmd_vel_listener_running = True
-
-        node = rclpy.create_node('cmd_vel_listener')
-        def cb(msg: Twist):
-            lin, ang = msg.linear.x, msg.angular.z
-            if lin > 0.1 and abs(ang) < 0.1:      c='forward'
-            elif lin < -0.1 and abs(ang) < 0.1:   c='backward'
-            elif ang > 0.1 and abs(lin) < 0.1:    c='right'
-            elif ang < -0.1 and abs(lin) < 0.1:   c='left'
-            elif lin>0.1 and ang>0.1:             c='forwardANDright'
-            elif lin>0.1 and ang<-0.1:            c='forwardANDleft'
-            elif lin<-0.1 and ang>0.1:            c='backwardANDright'
-            elif lin<-0.1 and ang<-0.1:           c='backwardANDleft'
-            else:                                 c='stop'
-            if self.ser:
-                self.ser.write((c+"\n").encode())
-
-        sub = node.create_subscription(Twist, '/cmd_vel', cb, 10)
-        try:
-            self.get_logger().info("[NAV2] cmd_vel listener started")
-            rclpy.spin(node)
-        except:
-            pass
-        finally:
-            node.destroy_node()
-            self.cmd_vel_listener_running = False
-
-    def _amcl_callback(self, msg: PoseWithCovarianceStamped):
-        p = msg.pose.pose
-        self.current_pose['x'] = p.position.x
-        self.current_pose['y'] = p.position.y
-        q = p.orientation
-        self.current_pose['theta'] = math.atan2(
-            2*(q.w*q.z + q.x*q.y),
-            1 - 2*(q.y*q.y + q.z*q.z)
-        )
+    # —— Relay /cmd_vel → ESP32  ——
+    def _on_cmd_vel(self, msg: Twist):
+        # only forward if in “return to key” mode
+        # you can add a flag if you only want this under certain conditions
+        lin  = msg.linear.x
+        ang  = msg.angular.z
+        cmd  = 'stop'
+        if lin>0.1 and abs(ang)<0.1:	cmd='forward'
+        elif lin< -0.1 and abs(ang)<0.1:	cmd='backward'
+        elif ang>0.1 and abs(lin)<0.1:	cmd='right'
+        elif ang< -0.1 and abs(lin)<0.1:	cmd='left'
+        elif lin>0.1 and ang>0.1:		cmd='forwardANDright'
+        elif lin>0.1 and ang< -0.1:		cmd='forwardANDleft'
+        elif lin< -0.1 and ang>0.1:		cmd='backwardANDright'
+        elif lin< -0.1 and ang< -0.1:		cmd='backwardANDleft'
+        if self.ser and self.ser.is_open:
+            self.ser.write((cmd+"\n").encode())
 
 def main():
     rclpy.init()
@@ -270,5 +248,5 @@ def main():
         node.destroy_node()
         rclpy.shutdown()
 
-if __name__ == "__main__":
+if __name__=='__main__':
     main()
