@@ -29,7 +29,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
-
+rclpy.init()
 
 #Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
 SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/dev/ttyUSB4", 
@@ -408,7 +408,6 @@ def on_message(client, userdata, msg):
 def main():
     #Robot function
     #Telemetry loop
-    rclpy.init()
 
     global ser
     global SERIAL_PORT
