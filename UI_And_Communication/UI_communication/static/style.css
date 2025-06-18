@@ -59,6 +59,26 @@ body {
   border-radius: 8px;
   padding: 8px 16px;
   margin-top: 10px;
+  height: 40px;
+}
+
+.location-table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+}
+.location-table th {
+  text-align: center;
+  padding-bottom: 0.5rem;
+}
+.location-table td {
+  text-align: center;
+  padding: 0.5rem;
+}
+.loc-name {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: #555;
 }
 
 /* ── Arrow Pad ── */

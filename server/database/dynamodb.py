@@ -4,11 +4,13 @@ from aws_config import dynamodb
 import boto3
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
+from datetime import datetime
 from .aws_config import AWS_REGION
 import botocore.exceptions
 
 
-dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
+dynamodb = boto3.resource("dynamodb", region_name="eu-north-1")
+table = dynamodb.Table("KeyLocations")
 
 _table_cache = {}
 
@@ -42,13 +44,16 @@ def log_location(device_id, x, y):
         'y': Decimal(str(y))
     })
 
-def save_key_location(name, x, y):
-    table = get_table('KeyLocations')
-    table.put_item(Item={
-        'name': name,
-        'x': Decimal(str(x)),
-        'y': Decimal(str(y))
-    })
+def save_key_location(name, x, y, theta=0.0):
+    item = {
+        "name": name,
+        "x": Decimal(str(x)),
+        "y": Decimal(str(y)),
+        "theta": Decimal(str(theta)),
+        "created_at": datetime.utcnow().isoformat()
+    }
+    table.put_item(Item=item)
+    print(f"[DynamoDB] Stored location: {item}")
 
 def update_pid_values(device_id, loop, pg, dg, ig, sp, rot=0):
     table = get_table('PIDConfigs')
@@ -100,3 +105,31 @@ def safe_put_item(table, item):
         table.put_item(Item=item)
     except botocore.exceptions.BotoCoreError as e:
         print(f"Failed to write to {table.name}: {e}")
+
+# In on_connect() in mqtt_serial_bridge.py, add this line:
+# client.subscribe("robot/auto/key/assign")
+
+# on_message() in mqtt_serial_bridge.py, add this block:
+"""elif topic == "robot/auto/key/assign":
+    try:
+        data = json.loads(payload)
+        x = float(data['x'])
+        y = float(data['y'])
+        theta = float(data.get('theta', 0.0))
+        name = data.get('name', f"Location_{int(x)}_{int(y)}")  # fallback name
+        from dynamodb import save_key_location
+        save_key_location(name, x, y, theta)
+    except Exception as e:
+        print(f"[MQTT] Error handling key location assign: {e}")
+"""
+# Update Frontend mqtt-control.js
+# Make sure when the "Assign" button is clicked, it sends:
+"""
+const payload = JSON.stringify({
+  name: "DockingStation",  // add this if not already
+  x: parseFloat(document.getElementById('key-x')?.value),
+  y: parseFloat(document.getElementById('key-y')?.value),
+  theta: 0.0
+});
+pub('robot/auto/key/assign', payload);
+"""
