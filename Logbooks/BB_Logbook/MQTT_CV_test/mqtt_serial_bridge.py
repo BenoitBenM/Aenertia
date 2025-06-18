@@ -1,439 +1,240 @@
-import paho.mqtt.client as mqtt
-import serial
-import threading # Threading is a library that allows us to run other tasks that the current one in the background
-from time import sleep
-from Advanced_CV.pose_detection import pose_detection
-#, send_frame
-import cv2
-from flask import Flask, Response, send_from_directory
-import json
-import csv
-import global_var as gv
+#!/usr/bin/env python3
 import os
+import json
+import threading
+import serial
+from time import sleep
 
-from EnergyCalculation import (
-    initialize_csv_file,
-    append_to_csv,
-    calculate_percentage
-)
-import math
-import tf2_ros
 import rclpy
 from rclpy.node import Node
-from tf2_ros import TransformException
-from tf2_ros.buffer import Buffer
-from tf2_ros.transform_listener import TransformListener
-from geometry_msgs.msg import TransformStamped
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from rclpy.executors import MultiThreadedExecutor
 
-rclpy.init()
+from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
+from nav2_msgs.action import NavigateToPose
+from rclpy.action import ActionClient
 
-#Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
-SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/dev/ttyUSB4", 
-                "/dev/ttyUSB5", "/dev/ttyUSB6", "/dev/ttyUSB7", "/dev/ttyUSB8","/dev/ttyUSB9", 
-                "/dev/ttyUSB10", "/dev/ttyUSB11", "/dev/ttyUSB12", "/dev/ttyUSB13","/dev/ttyUSB14",
-                "/dev/ttyUSB15", "/dev/ttyUSB16", "/dev/ttyUSB17","/dev/ttyUSB18", "/dev/ttyUSB0" ]
+import paho.mqtt.client as mqtt
 
-baud_rate = 115200
+# SERIAL CONFIG
+SERIAL_PORTS = [
+    "/dev/esp32", "/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyUSB2", # …
+]
+BAUD_RATE = 115200
 
-#global variables
-manual_mode = False
-payload = "stop"
-ser = None
-mode = "manual"
-#gv.follow_mode = False
-#gv.HumanDetected = False
-#gv.offset = 0
-
-key_locations = {}
-cmd_vel_listener_running = False
-
-
+# NAV2 GOAL TOLERANCES (not strictly needed when using NavigateToPose action)
 GOAL_TOLERANCE = 0.15  # meters
 ANGLE_TOLERANCE = 0.1  # radians
 
-# Store last known position
-current_pose = {'x': 0.0, 'y': 0.0, 'theta': 0.0}
-
-# # FLASK APP SETUP
-# app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
-
-# @app.route('/')
-# def index():
-#     return send_from_directory('static', 'index.html')
-
-# @app.route('/video_feed')
-# def video_feed():
-#     return Response(
-#         send_frame(),
-#         mimetype='multipart/x-mixed-replace; boundary=frame'
-#     )
-
-# def start_web():
-#     """Runs the Flask server for static files + MJPEG stream."""
-#     app.run(host='0.0.0.0', port=8001, threaded=True)
-
-
-
-def send_2_esp(command):
-    print(f"Sending to esp: {command}")
-    if ser and ser.is_open:
-        ser.write((command + "\n").encode())
-
-def manual_control():
-    while manual_mode:
-        if payload == "up":
-            send_2_esp("forward")
-        elif payload == "down":
-            send_2_esp("backward")
-        elif payload == "right":
-            send_2_esp("right")
-        elif payload == "left":
-            send_2_esp("left")
-        elif payload == "up-right":
-            send_2_esp("forwardANDright")
-        elif payload == "up-left":
-            send_2_esp("forwardANDleft")
-        elif payload == "down-right":
-            send_2_esp("backwardANDright")
-        elif payload == "down-left":
-            send_2_esp("backwardANDleft")
-        else:
-            send_2_esp("stop")
-
-        sleep(0.2)
-
-def follow_me():
-    gv.HumanDetected
-    gv.offset
-    threading.Thread(target=pose_detection, daemon=True).start() #To fix this we use threading. Threading isolates the code we target and procceeds zith the rest of the code.
-    while gv.follow_mode:
-        print(gv.offset)
-        if gv.HumanDetected:
-            # print("HUMAN DETECTED")
-            if abs(gv.offset) < 320*0.62:
-                send_2_esp("forward")
-            elif 320*0.62 <= gv.offset:
-                send_2_esp("forwardANDright")
-                
-            elif -320*0.62 >= gv.offset:
-                send_2_esp("forwardANDleft")
-
-            else: 
-                send_2_esp("stop")
-        else:
-            send_2_esp("stop")
-        
-        sleep(0.05)
-
-
-class PoseRecorder(Node):
+class RobotBridge(Node):
     def __init__(self):
-        super().__init__('pose_recorder')
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
+        super().__init__('robot_bridge')
 
-    def get_current_pose(self):
-        try:
-            now = rclpy.time.Time()
-            trans: TransformStamped = self.tf_buffer.lookup_transform(
-                'map',
-                'base_link',
-                now,
-                timeout=rclpy.duration.Duration(seconds=1.0)
-            )
-            x = trans.transform.translation.x
-            y = trans.transform.translation.y
+        # --- Serial port for ESP32 ---
+        self.ser = self._init_serial()
+        if not self.ser:
+            self.get_logger().error("No serial port opened; manual/auto commands will fail.")
 
-            # Convert quaternion to yaw
-            q = trans.transform.rotation
-            siny_cosp = 2 * (q.w * q.z + q.x * q.y)
-            cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
-            theta = math.atan2(siny_cosp, cosy_cosp)
+        # --- MQTT client ---
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_client.on_connect = self._on_mqtt_connect
+        self.mqtt_client.on_message = self._on_mqtt_message
 
-            return {'x': x, 'y': y, 'theta': theta}
-        except TransformException as e:
-            self.get_logger().error(f'TF error: {str(e)}')
-            return None
+        self.key_locations = {}          # name -> {'x':…, 'y':…, 'theta':…}
+        self.manual_mode = False
+        self.follow_mode = False
 
-def amcl_callback(msg):
-    global current_pose
-    current_pose['x'] = msg.pose.pose.position.x
-    current_pose['y'] = msg.pose.pose.position.y
+        # Map MQTT topics → handler methods
+        self._mqtt_handlers = {
+            'robot/mode':          self._handle_mode,
+            'robot/manual/command':self._handle_manual,
+            'robot/auto':          self._handle_auto,
+            'robot/auto/key/assign': self._handle_assign,
+            'robot/goto_keyloc':   self._handle_goto_keyloc,
+        }
 
-    q = msg.pose.pose.orientation
-    siny_cosp = 2 * (q.w * q.z + q.x * q.y)
-    cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
-    current_pose['theta'] = math.atan2(siny_cosp, cosy_cosp)
+        # --- Nav2 action client ---
+        self.nav2_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
-def has_reached_goal(goal):
-    dx = goal['x'] - current_pose['x']
-    dy = goal['y'] - current_pose['y']
-    dtheta = abs(goal['theta'] - current_pose['theta'])
+        # --- AMCL pose subscriber (to track current pose) ---
+        self.current_pose = {'x':0.0,'y':0.0,'theta':0.0}
+        self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/amcl_pose',
+            self._amcl_callback,
+            10
+        )
 
-    dist = math.hypot(dx, dy)
-    return dist < GOAL_TOLERANCE and dtheta < ANGLE_TOLERANCE
+        # --- Start background threads ---
+        threading.Thread(target=self._start_mqtt, daemon=True).start()
+        threading.Thread(target=self._serial_reader, daemon=True).start()
 
-
-def gotoKeyLocation(pose_dict):
-    node = rclpy.create_node('goto_key_location')
-
-    # 1. Publier la pose cible
-    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
-    msg = PoseStamped()
-    msg.header.frame_id = "map"
-    msg.pose.position.x = pose_dict['x']
-    msg.pose.position.y = pose_dict['y']
-    msg.pose.position.z = 0.0
-    theta = pose_dict['theta']
-    msg.pose.orientation.z = math.sin(theta / 2)
-    msg.pose.orientation.w = math.cos(theta / 2)
-    pub.publish(msg)
-    print(f"[NAV2] Pose sent to Nav2: {pose_dict}")
-
-    # 2. Lancer l'écoute de /cmd_vel dans un process séparé
-    threading.Thread(target=nav2_drive_from_cmd_vel, daemon=True).start()
-
-
-    # 3. Souscrire à /amcl_pose pour connaître la position en temps réel
-    sub = node.create_subscription(
-        PoseWithCovarianceStamped,
-        '/amcl_pose',
-        amcl_callback,
-        10
-    )
-
-    # 4. Boucle de vérification : est-ce qu’on a atteint l’objectif ?
-    try:
-        while rclpy.ok():
-            rclpy.spin_once(node, timeout_sec=0.2)
-            if has_reached_goal(pose_dict):
-                print("[NAV2] Goal reached!")
-                break
-    finally:
-        node.destroy_node()
-
-
-
-def save_current_location(client):
-    node = PoseRecorder()
-    rclpy.spin_once(node, timeout_sec=1.0)
-
-    pose = node.get_current_pose()
-    if pose is not None:
-        print(f"Position enregistrée : {pose}")
-        client.publish("telemetry/saved_pose", json.dumps(pose))
-    else:
-        print("Cant save location.")
-        client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
-
-    node.destroy_node()
-
-def nav2_drive_from_cmd_vel():
-    global cmd_vel_listener_running
-    if cmd_vel_listener_running:
-        print("[NAV2] cmd_vel listener already running.")
-        return
-    cmd_vel_listener_running = True
-
-    node = rclpy.create_node('cmd_vel_listener')
-
-    def callback(msg: Twist):
-        linear = msg.linear.x
-        angular = msg.angular.z
-
-        # Simple thresholding to determine direction
-        if linear > 0.1 and abs(angular) < 0.1:
-            send_2_esp("forward")
-        elif linear < -0.1 and abs(angular) < 0.1:
-            send_2_esp("backward")
-        elif angular > 0.1 and abs(linear) < 0.1:
-            send_2_esp("right")
-        elif angular < -0.1 and abs(linear) < 0.1:
-            send_2_esp("left")
-        elif linear > 0.1 and angular > 0.1:
-            send_2_esp("forwardANDright")
-        elif linear > 0.1 and angular < -0.1:
-            send_2_esp("forwardANDleft")
-        elif linear < -0.1 and angular > 0.1:
-            send_2_esp("backwardANDright")
-        elif linear < -0.1 and angular < -0.1:
-            send_2_esp("backwardANDleft")
-        else:
-            send_2_esp("stop")
-
-    # Subscribe to /cmd_vel
-    sub = node.create_subscription(Twist, '/cmd_vel', callback, 10)
-
-    try:
-        print("[NAV2] Listening to /cmd_vel...")
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        print("[NAV2 ERROR]", e)
-    finally:
-        cmd_vel_listener_running = False
-        node.destroy_node()
-
-
-
-# ################################################################## TELEMETRY ##################################################################
-
-def esp_read(client):
-    """
-    Read serial lines; when a 'PM:' message arrives, parse VB/EU,
-    log to CSV, compute %, and publish on 'robot/battery'.
-    """
-    global ser
-
-    # ensure CSV exists
-    initialize_csv_file()
-
-    while True:
-        if not ser or not ser.is_open:
-            sleep(0.1)
-            continue
-
-        raw = ser.readline().decode(errors='ignore').strip()
-        if raw.startswith("PM:"):
+    # ---- Serial init ----
+    def _init_serial(self):
+        for port in SERIAL_PORTS:
             try:
-                payload_json = raw.split(None, 1)[1]
-                data = json.loads(payload_json)
-                VB = data.get("VB")
-                EU = data.get("EU")
+                ser = serial.Serial(port, BAUD_RATE, timeout=1)
+                self.get_logger().info(f"Serial opened on {port}")
+                return ser
+            except serial.SerialException:
+                continue
+        return None
 
-                if VB is None or EU is None:
-                    print("[ESP] PM: missing VB/EU")
-                    continue
+    def _serial_reader(self):
+        """Continuously read battery telemetry from ESP and publish over MQTT."""
+        while True:
+            if not self.ser or not self.ser.is_open:
+                sleep(0.5)
+                continue
+            try:
+                line = self.ser.readline().decode('utf8', 'ignore').strip()
+            except serial.SerialException:
+                sleep(1.0)
+                continue
 
-                # 1) log raw values
-                append_to_csv(VB, EU)
-                
-                client.publish('robot/vb', str(VB))
-                client.publish('robot/eu', str(EU))
+            if line.startswith("PM:"):
+                try:
+                    data = json.loads(line.split(None,1)[1])
+                    VB, EU = data['VB'], data['EU']
+                    pct, _ = calculate_percentage(VB, EU)  # your existing function
+                    # publish back to MQTT
+                    self.mqtt_client.publish('robot/vb',  str(VB))
+                    self.mqtt_client.publish('robot/eu',  str(EU))
+                    self.mqtt_client.publish('robot/battery', f"{pct}")
+                except Exception as e:
+                    self.get_logger().warn(f"Serial parse error: {e}")
+            sleep(0.1)
 
-                # 2) compute battery percentage
-                pct, Et = calculate_percentage(VB, EU)
-                print(f"[Battery] {pct}%")
+    # ---- MQTT thread ----
+    def _start_mqtt(self):
+        self.mqtt_client.connect("localhost", 1883, 60)
+        self.mqtt_client.loop_forever()
 
-                # 3) publish to MQTT
-                client.publish('robot/battery', str(pct))
+    def _on_mqtt_connect(self, client, userdata, flags, rc):
+        self.get_logger().info("MQTT connected")
+        for topic in self._mqtt_handlers:
+            client.subscribe(topic)
 
-            except Exception as e:
-                print("[ESP] Error parsing PM:", e)
-
-        sleep(0.5)
-
-
-def on_connect(client, userdata, flags, rc):
-    gv.HumanDetected
-    gv.offset
-    
-#     print("MQTT connected with result code", rc)
-    client.subscribe("robot/mode")
-    client.subscribe("robot/auto")
-    client.subscribe("robot/manual/command")
-    client.subscribe("robot/auto/key/assign")    
-    client.subscribe("robot/goto_keyloc")
-    client.publish("robot/auto/key/locations", json.dumps(key_locations))
-
-#     # Removed the thread for continuous CV and put it in follow mode
-    threading.Thread(target=esp_read, args=(client,), daemon=True).start() #Continuously read value from ESP
-
-def on_message(client, userdata, msg):
-    #global cv_enabled
-    global mode
-    global manual_mode
-    global payload    
-    gv.follow_mode
-    gv.HumanDetected
-    gv.offset
-
-    #MQTT input
-    payload = msg.payload.decode()
-    topic = msg.topic
-    print(f"Topic:{msg.topic} ; Command: {payload}")
-
-    # We start by checking if the mode was changed
-    if topic == "robot/mode":
-        mode = payload
-
-    # Check if the robot should stop following
-    if mode != "autonomous" or payload == "GoToKeyLocation":  # This should be GoToKeyLocation Instead of return
-        gv.follow_mode = False
-        print("follow mode OFF")
-
-    # Manual mode code
-    if mode == "manual":
-        if manual_mode == False:
-            manual_mode = True
-            threading.Thread(target=manual_control, daemon=True).start() # Runs manual mode until disabled
-
-    # Autnomous mode code
-    elif mode == "autonomous":  
-        manual_mode = False
-        if topic == "robot/auto":
-
-            # In follow mode the robot follows the person around
-            if payload == "follow":  
-                if gv.follow_mode == False:
-                    gv.follow_mode = True
-                    threading.Thread(target=follow_me, daemon=True).start() # Runs follow_me unless follow_mode is disabled
-
-
-            elif payload == "stop": # To be implemented later
-                send_2_esp("stop")
-
-    if payload == "save":
-        save_current_location(client)
-
-    elif topic == "robot/goto_keyloc":
-        try:
-            pose_dict = json.loads(payload)
-            gotoKeyLocation(pose_dict)
-        except Exception as e:
-            print(f"Invalid pose payload: {e}")
-
-    elif topic == "robot/auto/key/assign":
-        key_name = payload.strip()
-        node = PoseRecorder()
-        rclpy.spin_once(node, timeout_sec=1.0)
-        pose = node.get_current_pose()
-        if pose:
-            key_locations[key_name] = pose
-            print(f"[KeyLocation] Saved {key_name} → {pose}")
-            client.publish("robot/auto/key/locations", json.dumps(key_locations))
+    def _on_mqtt_message(self, client, userdata, msg):
+        handler = self._mqtt_handlers.get(msg.topic)
+        if handler:
+            payload = msg.payload.decode()
+            handler(payload)
         else:
-            print(f"[KeyLocation] Could not get pose for '{key_name}'")
-        node.destroy_node()
+            self.get_logger().warn(f"No handler for topic {msg.topic}")
 
+    # ---- Handlers for each MQTT topic ----
+    def _handle_mode(self, payload):
+        self.get_logger().info(f"Set mode → {payload}")
+        self.manual_mode = (payload == 'manual')
+        self.follow_mode = False
+
+    def _handle_manual(self, payload):
+        if not self.manual_mode: return
+        cmd_map = {
+            'up':'forward','down':'backward','left':'left','right':'right',
+            'up-left':'forwardANDleft','up-right':'forwardANDright',
+            'down-left':'backwardANDleft','down-right':'backwardANDright',
+            'stop':'stop'
+        }
+        cmd = cmd_map.get(payload,'stop')
+        if self.ser and self.ser.is_open:
+            self.ser.write((cmd+"\n").encode())
+
+    def _handle_auto(self, payload):
+        if payload == 'follow':
+            self.follow_mode = True
+            threading.Thread(target=self._follow_loop, daemon=True).start()
+        elif payload == 'stop':
+            self.follow_mode = False
+
+    def _follow_loop(self):
+        import global_var as gv
+        pose_detection_thread = threading.Thread(target=pose_detection, daemon=True)
+        pose_detection_thread.start()
+        while self.follow_mode:
+            if gv.HumanDetected:
+                off = gv.offset
+                if abs(off) < 50:
+                    cmd='forward'
+                elif off>0:
+                    cmd='forwardANDright'
+                else:
+                    cmd='forwardANDleft'
+            else:
+                cmd='stop'
+            if self.ser and self.ser.is_open:
+                self.ser.write((cmd+"\n").encode())
+            sleep(0.1)
+
+    def _handle_assign(self, name):
+        # record current amcl pose
+        p = self.current_pose.copy()
+        self.key_locations[name] = p
+        self.mqtt_client.publish('robot/auto/key/locations', json.dumps(self.key_locations))
+        self.get_logger().info(f"Key '{name}' → {p}")
+
+    def _handle_goto_keyloc(self, payload):
+        try:
+            pose = json.loads(payload)
+        except Exception:
+            self.get_logger().error("Invalid JSON for goto_keyloc")
+            return
+
+        # build and send Nav2 goal:
+        if not self.nav2_client.wait_for_server(timeout_sec=2.0):
+            self.get_logger().error("Nav2 action server not available")
+            return
+
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose.header.frame_id = 'map'
+        goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
+        goal_msg.pose.pose.position.x = pose['x']
+        goal_msg.pose.pose.position.y = pose['y']
+        goal_msg.pose.pose.orientation.z = math.sin(pose['theta']/2.0)
+        goal_msg.pose.pose.orientation.w = math.cos(pose['theta']/2.0)
+
+        self.get_logger().info(f"[NAV2] Sending goal → {pose}")
+        send_goal = self.nav2_client.send_goal_async(
+            goal_msg,
+            feedback_callback=self._nav2_feedback
+        )
+        send_goal.add_done_callback(self._nav2_response)
+
+    def _nav2_feedback(self, feedback):
+        # optional: forward feedback via MQTT or just log
+        self.get_logger().debug(f"Nav2 feedback: {feedback}")
+
+    def _nav2_response(self, future):
+        result = future.result().result
+        status = future.result().status
+        if status == 4:   # SUCCEEDED
+            self.get_logger().info("[NAV2] Goal reached successfully")
+        else:
+            self.get_logger().warn(f"[NAV2] Goal failed with status {status}")
+
+    # ---- AMCL subscriber ----
+    def _amcl_callback(self, msg: PoseWithCovarianceStamped):
+        p = msg.pose.pose
+        self.current_pose['x'] = p.position.x
+        self.current_pose['y'] = p.position.y
+        q = p.orientation
+        self.current_pose['theta'] = math.atan2(
+            2*(q.w*q.z + q.x*q.y),
+            1 - 2*(q.y*q.y + q.z*q.z)
+        )
 
 def main():
-    #Robot function
-    #Telemetry loop
+    rclpy.init()
+    node = RobotBridge()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
 
-    global ser
-    global SERIAL_PORT
-    # threading.Thread(target=start_web, daemon=True).start()
-    for port in SERIAL_PORT:
-        try:
-            ser = serial.Serial(port, baud_rate, timeout=1)
-            print(f"Serial connection start using port: {port}")
-            break
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
-        except (FileNotFoundError, serial.SerialException):
-            print(f"failed to connect to port: {port}")
-
-    client = mqtt.Client() # Creat a client object from MQTT
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect("localhost", 1883, 60)
-    client.loop_forever()
-
-
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
