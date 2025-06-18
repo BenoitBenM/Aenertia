@@ -101,12 +101,12 @@ def follow_me():
         print(gv.offset)
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
-            if abs(gv.offset) < 640*0.75:
+            if abs(gv.offset) < 320*0.70:
                 send_2_esp("forward")
-            elif 640*0.75 <= gv.offset:
+            elif 320*0.70 <= gv.offset:
                 send_2_esp("forwardANDright")
                 
-            elif -640*0.75 >= gv.offset:
+            elif -320*0.70 >= gv.offset:
                 send_2_esp("forwardANDleft")
 
             else: 
