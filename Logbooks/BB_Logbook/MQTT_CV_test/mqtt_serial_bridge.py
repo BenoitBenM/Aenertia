@@ -101,21 +101,18 @@ def follow_me():
         print(gv.offset)
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
-            if abs(gv.offset) < 420: 
+            if abs(gv.offset) < 500:
                 send_2_esp("forward")
-            elif 420 <= gv.offset:
+            elif 500 <= gv.offset:
                 send_2_esp("forwardANDright")
-                sleep(0.1)
-            elif -420 >= gv.offset:
+            elif -500 >= gv.offset:
                 send_2_esp("forwardANDleft")
-                sleep(0.1)
-
             else: 
                 send_2_esp("stop")
         else:
             send_2_esp("stop")
         
-        sleep(0.1)
+        sleep(0.02)
 
 
 class PoseRecorder(Node):
