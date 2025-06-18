@@ -177,7 +177,6 @@ def has_reached_goal(goal):
 
 
 def gotoKeyLocation(pose_dict):
-    rclpy.init()
     node = rclpy.create_node('goto_key_location')
 
     # 1. Publier la pose cible
@@ -219,7 +218,6 @@ def gotoKeyLocation(pose_dict):
 
 
 def save_current_location(client):
-    rclpy.init()
     node = PoseRecorder()
     rclpy.spin_once(node, timeout_sec=1.0)
 
@@ -393,7 +391,6 @@ def on_message(client, userdata, msg):
 
     elif topic == "robot/auto/key/assign":
         key_name = payload.strip()
-        rclpy.init()
         node = PoseRecorder()
         rclpy.spin_once(node, timeout_sec=1.0)
         pose = node.get_current_pose()
@@ -411,6 +408,8 @@ def on_message(client, userdata, msg):
 def main():
     #Robot function
     #Telemetry loop
+    rclpy.init()
+
     global ser
     global SERIAL_PORT
     # threading.Thread(target=start_web, daemon=True).start()
