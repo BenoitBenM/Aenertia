@@ -45,6 +45,8 @@ mode = "manual"
 #gv.HumanDetected = False
 #gv.offset = 0
 
+key_locations = {}
+
 # # FLASK APP SETUP
 # app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
 
@@ -243,6 +245,8 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("robot/mode")
     client.subscribe("robot/auto")
     client.subscribe("robot/manual/command")
+    client.subscribe("robot/auto/key/assign")
+    mqtt_client.publish("robot/auto/key/locations", json.dumps(key_locations))
 
 #     # Removed the thread for continuous CV and put it in follow mode
     threading.Thread(target=esp_read, daemon=True).start() #Continuously read value from ESP
@@ -302,6 +306,22 @@ def on_message(client, userdata, msg):
             gotoKeyLocation(pose_dict)
         except Exception as e:
             print(f"Invalid pose payload: {e}")
+
+    elif topic == "robot/auto/key/assign":
+        key_name = payload.strip()
+        rclpy.init()
+        node = PoseRecorder()
+        rclpy.spin_once(node, timeout_sec=1.0)
+        pose = node.get_current_pose()
+        if pose:
+            key_locations[key_name] = pose
+            print(f"[KeyLocation] Saved {key_name} → {pose}")
+            mqtt_client.publish("robot/auto/key/locations", json.dumps(key_locations))
+        else:
+            print(f"[KeyLocation] Could not get pose for '{key_name}'")
+        node.destroy_node()
+        rclpy.shutdown()
+
 
 
 def main():
