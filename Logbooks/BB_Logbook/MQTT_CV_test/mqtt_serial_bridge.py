@@ -16,7 +16,7 @@ from EnergyCalculation import (
     append_to_csv,
     calculate_percentage
 )
-
+import multiprocessing
 import math
 import tf2_ros
 import rclpy
@@ -26,6 +26,10 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped
+
 
 
 #Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
@@ -46,6 +50,12 @@ mode = "manual"
 #gv.offset = 0
 
 key_locations = {}
+
+GOAL_TOLERANCE = 0.15  # meters
+ANGLE_TOLERANCE = 0.1  # radians
+
+# Store last known position
+current_pose = {'x': 0.0, 'y': 0.0, 'theta': 0.0}
 
 # # FLASK APP SETUP
 # app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
@@ -167,9 +177,27 @@ def gotoKeyLocation(pose_dict):
     pub.publish(msg)
     print(f"Pose sent to Nav2 : {pose_dict}")
 
+    # Lancer le listener cmd_vel en parallèle (processus séparé)
+    drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
+    drive_proc.start()
+
     rclpy.spin_once(node, timeout_sec=0.5)
     node.destroy_node()
     rclpy.shutdown()
+
+    sub = node.create_subscription(
+        PoseWithCovarianceStamped,
+        '/amcl_pose',
+        amcl_callback,
+        10
+    )
+
+    # Keep checking every second until reached
+    while rclpy.ok():
+        rclpy.spin_once(node, timeout_sec=0.5)
+        if has_reached_goal(pose_dict):
+            print("[NAV2] Goal reached!")
+            break
 
 
 def save_current_location(client):
@@ -188,6 +216,46 @@ def save_current_location(client):
     node.destroy_node()
     rclpy.shutdown()
 
+
+def nav2_drive_from_cmd_vel():
+    rclpy.init()
+    node = rclpy.create_node('cmd_vel_listener')
+
+    def callback(msg: Twist):
+        linear = msg.linear.x
+        angular = msg.angular.z
+
+        # Simple thresholding to determine direction
+        if linear > 0.1 and abs(angular) < 0.1:
+            send_2_esp("forward")
+        elif linear < -0.1 and abs(angular) < 0.1:
+            send_2_esp("backward")
+        elif angular > 0.1 and abs(linear) < 0.1:
+            send_2_esp("right")
+        elif angular < -0.1 and abs(linear) < 0.1:
+            send_2_esp("left")
+        elif linear > 0.1 and angular > 0.1:
+            send_2_esp("forwardANDright")
+        elif linear > 0.1 and angular < -0.1:
+            send_2_esp("forwardANDleft")
+        elif linear < -0.1 and angular > 0.1:
+            send_2_esp("backwardANDright")
+        elif linear < -0.1 and angular < -0.1:
+            send_2_esp("backwardANDleft")
+        else:
+            send_2_esp("stop")
+
+    # Subscribe to /cmd_vel
+    sub = node.create_subscription(Twist, '/cmd_vel', callback, 10)
+
+    try:
+        print("[NAV2] Listening to /cmd_vel...")
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 # ################################################################## TELEMETRY ##################################################################
 
