@@ -54,8 +54,8 @@ def pose_detection():
 
     cam = cv2.VideoCapture(0)  # 0 = /dev/video0, change if needed
     cam.set(cv2.CAP_PROP_FPS, 10)
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920/2)
-    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080/2)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
     time.sleep(2)
     
     print("Camera Started")
@@ -63,7 +63,7 @@ def pose_detection():
 
     mp_image_format = mp.ImageFormat.SRGB
 
-    while True:
+    while gv.follow_mode:
         # 3) Capture & wrap frame
         ret, frame_bgr = cam.read()
         if not ret:
@@ -135,34 +135,35 @@ def pose_detection():
 
 
 
-def send_frame():
-    global latest_frame
+# def send_frame():
+#     global latest_frame
 
-    while True:
-        with frame_lock:
-            frame = None if latest_frame is None else latest_frame.copy()
+#     while True:
+#         with frame_lock:
+#             frame = None if latest_frame is None else latest_frame.copy()
         
-        if frame is None:
-            time.sleep(0.2)
-            continue
+#         if frame is None:
+#             time.sleep(0.2)
+#             continue
 
-        # JPEG-encode
-        ok, buf = cv2.imencode('.jpg', frame)
-        if not ok:
-            continue
+#         # JPEG-encode
+#         ok, buf = cv2.imencode('.jpg', frame)
+#         if not ok:
+#             continue
 
-        # Yield multipart frame
-        yield (
-            b'--frame\r\n'
-            b'Content-Type: image/jpeg\r\n\r\n' +
-            buf.tobytes() +
-            b'\r\n'
-        )
-        # finally:
-    #     # 8) Cleanup 
-    #     landmarker.close()
-    #     cam.stop()
-    #     cv2.destroyAllWindows()
+#         # Yield multipart frame
+#         yield (
+#             b'--frame\r\n'
+#             b'Content-Type: image/jpeg\r\n\r\n' +
+#             buf.tobytes() +
+#             b'\r\n'
+#         )
+#         time.sleep(0.1)
+#         # finally:
+#     #     # 8) Cleanup 
+#     #     landmarker.close()
+#     #     cam.stop()
+#     #     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

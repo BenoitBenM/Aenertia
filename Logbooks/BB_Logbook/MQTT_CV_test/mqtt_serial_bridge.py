@@ -36,7 +36,7 @@ SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/d
 baud_rate = 115200
 
 #global variables
-follow_mode = False
+gv.follow_mode = False
 manual_mode = False
 payload = "stop"
 ser = None
@@ -44,23 +44,23 @@ mode = "manual"
 gv.HumanDetected = False
 gv.offset = 0
 
-# FLASK APP SETUP
-app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
+# # FLASK APP SETUP
+# app = Flask(__name__, static_folder='Placeholder_UI/static', static_url_path='')
 
-@app.route('/')
-def index():
-    return send_from_directory('static', 'index.html')
+# @app.route('/')
+# def index():
+#     return send_from_directory('static', 'index.html')
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(
-        send_frame(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+# @app.route('/video_feed')
+# def video_feed():
+#     return Response(
+#         send_frame(),
+#         mimetype='multipart/x-mixed-replace; boundary=frame'
+#     )
 
-def start_web():
-    """Runs the Flask server for static files + MJPEG stream."""
-    app.run(host='0.0.0.0', port=8001, threaded=True)
+# def start_web():
+#     """Runs the Flask server for static files + MJPEG stream."""
+#     app.run(host='0.0.0.0', port=8001, threaded=True)
 
 
 
@@ -96,17 +96,16 @@ def follow_me():
     gv.HumanDetected
     gv.offset
     print(gv.HumanDetected)
-    while follow_mode:
-        print(gv.HumanDetected)
-        print(gv.offset)
+    threading.Thread(target=pose_detection, daemon=True).start() #To fix this we use threading. Threading isolates the code we target and procceeds zith the rest of the code.
+    while gv.follow_mode:
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
-            if abs(gv.offset) < 500/2:
+            if abs(gv.offset) < 640*0.75:
                 send_2_esp("forward")
-            elif 500/2 <= gv.offset:
+            elif 640*0.75 <= gv.offset:
                 send_2_esp("forwardANDright")
                 
-            elif -500/2 >= gv.offset:
+            elif -640*0.75 >= gv.offset:
                 send_2_esp("forwardANDleft")
 
             else: 
@@ -114,7 +113,7 @@ def follow_me():
         else:
             send_2_esp("stop")
         
-        sleep(0.02)
+        sleep(0.05)
 
 
 class PoseRecorder(Node):
@@ -177,7 +176,7 @@ def save_current_location(mqtt_client):
 
     pose = node.get_current_pose()
     if pose is not None:
-        print(f"✅ Position enregistrée : {pose}")
+        print(f"Position enregistrée : {pose}")
         mqtt_client.publish("telemetry/saved_pose", json.dumps(pose))
     else:
         print("Cant save location.")
@@ -232,7 +231,7 @@ def esp_read():
             except Exception as e:
                 print("[ESP] Error parsing PM:", e)
 
-        sleep(0.05)
+        sleep(0.5)
 
 
 def on_connect(client, userdata, flags, rc):
@@ -244,16 +243,15 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("robot/auto")
     client.subscribe("robot/manual/command")
 
-#     # Run the CV pose detection in the background
-    threading.Thread(target=pose_detection, daemon=True).start() #To fix this we use threading. Threading isolates the code we target and procceeds zith the rest of the code.
+#     # Removed the thread for continuous CV and put it in follow mode
     threading.Thread(target=esp_read, daemon=True).start() #Continuously read value from ESP
 
 def on_message(client, userdata, msg):
     #global cv_enabled
     global mode
-    global follow_mode
     global manual_mode
-    global payload
+    global payload    
+    gv.follow_mode
     gv.HumanDetected
     gv.offset
 
@@ -268,7 +266,7 @@ def on_message(client, userdata, msg):
 
     # Check if the robot should stop following
     if mode != "autonomous" or payload == "GoToKeyLocation":  # This should be GoToKeyLocation Instead of return
-        follow_mode = False
+        gv.follow_mode = False
         print("follow mode OFF")
 
     # Manual mode code
@@ -284,8 +282,8 @@ def on_message(client, userdata, msg):
 
             # In follow mode the robot follows the person around
             if payload == "follow":  
-                if follow_mode == False:
-                    follow_mode = True
+                if gv.follow_mode == False:
+                    gv.follow_mode = True
                     threading.Thread(target=follow_me, daemon=True).start() # Runs follow_me unless follow_mode is disabled
 
             elif payload == "return": # This should be GoToKeyLocation Instead of return 
