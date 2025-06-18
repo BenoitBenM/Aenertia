@@ -34,15 +34,15 @@ const float kx = 5.0;
 const float VREF = 4.096;
 
 // PID parameters
-float kp_i = 3000;
+float kp_i = 2000;
 float ki_i = 0;
-float kd_i = 35;
+float kd_i = 80;
 
-float kp_o = -0.002;
-float ki_o = 0;
-float kd_o = 0;
+float kp_o = -0.003;
+float ki_o = -0.00007;
+float kd_o = 0.0;
 
-float kp_turn = -25;  
+float kp_turn = 20;  
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
@@ -53,8 +53,8 @@ float targetYaw = 0;  // 希望的角度，或者从遥控器获得的转动指�
 
 float lastAcceleration=0.0;
 
-float speed_max = 12;
-float yaw_max = 0.15;
+float speed_max = 10;
+float yaw_max = 0.08;
 
 float targetSpeed = 0;
 float actualSpeed = 0;
@@ -68,7 +68,7 @@ float lastTargetYaw = 0.0;
 float gyroRate = 0;
 float tiltx_raw = 0;
 float tiltTarget = 0;
-float tiltTargetBias = 0;
+float tiltTargetBias = -0.005;
 float tiltError = 0;
 float tiltIntegtal = 0.0;
 float tiltDerivative = 0;
@@ -92,11 +92,8 @@ float motorCommand=0.0;
 float dt=0.0;
 int commandTimer = 0;
 
-bool DEBUG = false;
+bool DEBUG = true;
 bool PM = false;
-bool TILT = true;
-
-
 
 float C = 0.98;
 
@@ -225,32 +222,10 @@ void loop()
     // Fetch data from MPU6050
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
-
-    // NEEDED FOR WHEEL ODOM SLAM
-    int32_t pos1 = step1.getPosition();
-    int32_t pos2 = step2.getPosition();
-
-    // ——— Begin IMU+Odometry JSON output ———
-    StaticJsonDocument<256> doc2;
-    doc2["ax"]   = a.acceleration.x;
-    doc2["ay"]   = a.acceleration.y;
-    doc2["az"]   = a.acceleration.z;
-    doc2["gx"]   = g.gyro.x;
-    doc2["gy"]   = g.gyro.y;
-    doc2["gz"]   = g.gyro.z;
-    doc2["pos1"] = pos1;  // step1.getPosition()
-    doc2["pos2"] = pos2;  // step2.getPosition()
-
-    String imuOdom;
-    serializeJson(doc2, imuOdom);
-    Serial.print("IMUODO: ");
-    Serial.println(imuOdom);
-    // ——— End IMU+Odometry JSON output ———
-
     tiltx_raw = atan2(a.acceleration.z, sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y));
     gyroRate = g.gyro.y-0.005;
     tiltx =(C * (tiltx + gyroRate * dt) + (1 - C) * tiltx_raw);
-    currentYaw = g.gyro.z;
+    currentYaw = g.gyro.z+0.057;
 
     // Calculate Elements of the Speed Error
     actualSpeed = (step2.getSpeedRad()-step1.getSpeedRad())/2;
@@ -269,7 +244,7 @@ void loop()
     // Calcualte Elememnts for Tilt Error
     tiltError = tiltTarget - tiltx;
     tiltIntegtal += tiltError * dt;
-    tiltIntegtal = constrain(tiltIntegtal, -100, 100);
+    tiltIntegtal = constrain(tiltIntegtal, -1, 1);
     tiltDerivative = (tiltError - lastTiltError) / dt;
     lastTiltError = tiltError;
 
@@ -305,19 +280,6 @@ void loop()
       step2.setTargetSpeedRad((20));
     }else {
         step2.setTargetSpeedRad(-(20));
-    }
-
-    if(TILT){
-      String output;
-      StaticJsonDocument<128> doc;
-
-      doc["tilt"] = tiltx;
-      doc["time"] = millis();
-
-      // Serialize JSON to a string
-      serializeJson(doc, output);
-      Serial.print("TILT: ");
-      Serial.println(output);
     }
         
   }
@@ -407,15 +369,15 @@ void loop()
     Serial.print(" | targetSpeed: ");
     Serial.print(targetSpeed);
     Serial.print(" |gyro.z: ");
-    Serial.print(currentYaw);
+    Serial.println(currentYaw,4);
     // Serial.print(" | position1: ");
     // Serial.print(step1.getPosition());
     // Serial.print(" | position2: ");
     // Serial.print(step2.getPosition());
     //Serial.print(" | millis: ");
     //Serial.print(millis());
-    Serial.print(" | ADC(A0): ");
-    Serial.println(((readADC(0) * VREF) / 4095.0-0.21)/1.5);
+    // Serial.print(" | ADC(A0): ");
+    // Serial.println(((readADC(0) * VREF) / 4095.0-0.21)/1.5);
   //   Serial.print(" | TargetYaw: ");
   //   Serial.println(targetYaw);
   }

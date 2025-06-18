@@ -9,6 +9,7 @@
         "ostream": "cpp",
         "sstream": "cpp",
         "streambuf": "cpp",
-        "*.main": "cpp"
+        "*.main": "cpp",
+        "cmath": "cpp"
     }
 }

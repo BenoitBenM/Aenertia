@@ -1,7 +1,7 @@
 % File: plot_voltage_vs_energy_avg.m
 
 % 读取 CSV 文件
-data = readtable('tilt_log.csv');
+data = readtable('tilt_log_kp3000.csv');
 
 % 提取列
 Tilt = data.TILT;

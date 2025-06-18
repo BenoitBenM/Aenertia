@@ -26,6 +26,7 @@ const int ADC_MOSI_PIN      = 23;
 const int TOGGLE_PIN        = 32;
 const int PRINT_INTERVAL    = 500;
 const int SERIAL_INTERVAL   = 1000;
+const int IMU_INTERVAL = 200;
 const int PM_INTERVAL = 100;
 const int LOOP_INTERVAL     = 10;
 const int STEPPER_INTERVAL_US = 20;
@@ -34,15 +35,15 @@ const float kx = 5.0;
 const float VREF = 4.096;
 
 // PID parameters
-float kp_i = 2000;
+float kp_i = 3000;
 float ki_i = 0;
-float kd_i = 80;
+float kd_i = 35; //35
 
-float kp_o = -0.003;
-float ki_o = -0.00007;
-float kd_o = 0.0;
+float kp_o = -0.002;//-0.002
+float ki_o = 0;
+float kd_o = 0;
 
-float kp_turn = 25.0;  
+float kp_turn = -25;//-25  
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
@@ -68,7 +69,7 @@ float lastTargetYaw = 0.0;
 float gyroRate = 0;
 float tiltx_raw = 0;
 float tiltTarget = 0;
-float tiltTargetBias = 0.025;
+float tiltTargetBias = 0.04;
 float tiltError = 0;
 float tiltIntegtal = 0.0;
 float tiltDerivative = 0;
@@ -93,7 +94,9 @@ float dt=0.0;
 int commandTimer = 0;
 
 bool DEBUG = false;
-bool PM = true;
+bool PM = false;
+bool TILT = false;
+bool IMUODO = true;
 
 
 
@@ -183,6 +186,7 @@ void loop()
     static unsigned long serialTimer = 0;
     static unsigned long PMTimer = 0;
     static unsigned long loopTimer = 0;   //time of the next control update
+    static unsigned long IMUTimer = 0;
     static float tiltx = 0.0;             //current tilt angle
     
     //Run the control loop every LOOP_INTERVAL ms
@@ -197,17 +201,17 @@ void loop()
     //   targetSpeed=0;
     //   targetYaw=0;
     // }else if (now<8000){
-    //   targetSpeed=0;
+    //   //targetSpeed=0;
     //   targetYaw=0.1;
     // }else if(now<11000){
-    //   targetSpeed=0;
+    //   //targetSpeed=0;
     //   targetYaw=-0.1;
     // }else if(now<14000){
-    //   targetSpeed = 8;
-    //   targetYaw = 0;
+    //   //targetSpeed = 8;
+    //   targetYaw =0.1;
     // }else if(now<17000){
-    //   targetSpeed = -8;
-    //   targetYaw = 0;
+    //   //targetSpeed = -8;
+    //   targetYaw = -0.1;
     // }else{
     //   targetSpeed=0;
     //   targetYaw=0;
@@ -224,10 +228,16 @@ void loop()
     // Fetch data from MPU6050
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
+
+    // NEEDED FOR WHEEL ODOM SLAM
+    float pos1 = step1.getPositionRad();
+    float pos2 = step2.getPositionRad();
+
+
     tiltx_raw = atan2(a.acceleration.z, sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y));
     gyroRate = g.gyro.y-0.005;
     tiltx =(C * (tiltx + gyroRate * dt) + (1 - C) * tiltx_raw);
-    currentYaw = g.gyro.z+0.06;
+    currentYaw = g.gyro.z;
 
     // Calculate Elements of the Speed Error
     actualSpeed = (step2.getSpeedRad()-step1.getSpeedRad())/2;
@@ -283,6 +293,37 @@ void loop()
     }else {
         step2.setTargetSpeedRad(-(20));
     }
+
+    if(TILT){
+      String output;
+      StaticJsonDocument<128> doc;
+
+      doc["tilt"] = currentYaw;
+      doc["time"] = millis();
+
+      // Serialize JSON to a string
+      serializeJson(doc, output);
+      Serial.print("TILT: ");
+      Serial.println(output);
+    }
+
+      if (millis() > IMUTimer && IMUODO){
+        IMUTimer += IMU_INTERVAL;
+        StaticJsonDocument<256> doc2;
+        doc2["ax"]   = a.acceleration.x;
+        doc2["ay"]   = a.acceleration.y;
+        doc2["az"]   = a.acceleration.z;
+        doc2["gx"]   = g.gyro.x;
+        doc2["gy"]   = g.gyro.y;
+        doc2["gz"]   = g.gyro.z;
+        doc2["pos1"] = pos1*3.25;  // step1.getPosition()
+        doc2["pos2"] = pos2*3.25;  // step2.getPosition()
+
+        String imuOdom;
+        serializeJson(doc2, imuOdom);
+        Serial.print("IMUODO: ");
+        Serial.println(imuOdom);
+      }
         
   }
   if (millis() > PMTimer && PM){
@@ -302,7 +343,7 @@ void loop()
       current_board = 0;
     }
 
-    energy_used += PM_INTERVAL/1000.0*((current_board*v5)+(current_motor)*voltage);
+    energy_used += PM_INTERVAL/1000.0*(current_board*v5+current_motor*voltage);
     voltage_sum += voltage;
     
 
