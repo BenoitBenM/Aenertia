@@ -191,7 +191,7 @@ def save_current_location(client):
 
 # ################################################################## TELEMETRY ##################################################################
 
-def esp_read():
+def esp_read(client):
     """
     Read serial lines; when a 'PM:' message arrives, parse VB/EU,
     log to CSV, compute %, and publish on 'robot/battery'.
@@ -221,15 +221,15 @@ def esp_read():
                 # 1) log raw values
                 append_to_csv(VB, EU)
                 
-                mqtt_client.publish('robot/vb', str(VB))
-                mqtt_client.publish('robot/eu', str(EU))
+                client.publish('robot/vb', str(VB))
+                client.publish('robot/eu', str(EU))
 
                 # 2) compute battery percentage
                 pct, Et = calculate_percentage(VB, EU)
                 print(f"[Battery] {pct}%")
 
                 # 3) publish to MQTT
-                mqtt_client.publish('robot/battery', str(pct))
+                client.publish('robot/battery', str(pct))
 
             except Exception as e:
                 print("[ESP] Error parsing PM:", e)
@@ -249,7 +249,7 @@ def on_connect(client, userdata, flags, rc):
     client.publish("robot/auto/key/locations", json.dumps(key_locations))
 
 #     # Removed the thread for continuous CV and put it in follow mode
-    threading.Thread(target=esp_read, daemon=True).start() #Continuously read value from ESP
+    threading.Thread(target=esp_read, args=(client,), daemon=True).start() #Continuously read value from ESP
 
 def on_message(client, userdata, msg):
     #global cv_enabled
