@@ -172,7 +172,7 @@ def gotoKeyLocation(pose_dict):
     rclpy.shutdown()
 
 
-def save_current_location(mqtt_client):
+def save_current_location(client):
     rclpy.init()
     node = PoseRecorder()
     rclpy.spin_once(node, timeout_sec=1.0)
@@ -180,10 +180,10 @@ def save_current_location(mqtt_client):
     pose = node.get_current_pose()
     if pose is not None:
         print(f"Position enregistrée : {pose}")
-        mqtt_client.publish("telemetry/saved_pose", json.dumps(pose))
+        client.publish("telemetry/saved_pose", json.dumps(pose))
     else:
         print("Cant save location.")
-        mqtt_client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
+        client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
 
     node.destroy_node()
     rclpy.shutdown()
@@ -316,7 +316,7 @@ def on_message(client, userdata, msg):
         if pose:
             key_locations[key_name] = pose
             print(f"[KeyLocation] Saved {key_name} → {pose}")
-            mqtt_client.publish("robot/auto/key/locations", json.dumps(key_locations))
+            client.publish("robot/auto/key/locations", json.dumps(key_locations))
         else:
             print(f"[KeyLocation] Could not get pose for '{key_name}'")
         node.destroy_node()
