@@ -49,6 +49,8 @@ mode = "manual"
 #gv.offset = 0
 
 key_locations = {}
+cmd_vel_listener_running = False
+
 
 GOAL_TOLERANCE = 0.15  # meters
 ANGLE_TOLERANCE = 0.1  # radians
@@ -231,6 +233,12 @@ def save_current_location(client):
     node.destroy_node()
 
 def nav2_drive_from_cmd_vel():
+    global cmd_vel_listener_running
+    if cmd_vel_listener_running:
+        print("[NAV2] cmd_vel listener already running.")
+        return
+    cmd_vel_listener_running = True
+
     node = rclpy.create_node('cmd_vel_listener')
 
     def callback(msg: Twist):
@@ -265,8 +273,13 @@ def nav2_drive_from_cmd_vel():
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print("[NAV2 ERROR]", e)
     finally:
+        cmd_vel_listener_running = False
         node.destroy_node()
+
+
 
 # ################################################################## TELEMETRY ##################################################################
 
