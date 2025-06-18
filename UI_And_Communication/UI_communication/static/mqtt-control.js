@@ -4,7 +4,7 @@ console.log('[MQTT-CTRL] mqtt-control.js loaded');
 
 window.addEventListener('DOMContentLoaded', () => {
   // === MQTT Setup ===
-  const brokerUrl = 'ws://172.20.10.6:9001';
+  const brokerUrl = 'ws://172.20.10.9:9001';
   const client    = mqtt.connect(brokerUrl, { keepalive:30, reconnectPeriod:1000 });
 
   // === In-Browser State ===
