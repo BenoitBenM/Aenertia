@@ -96,9 +96,9 @@ def manual_control():
 def follow_me():
     gv.HumanDetected
     gv.offset
-    print(gv.HumanDetected)
     threading.Thread(target=pose_detection, daemon=True).start() #To fix this we use threading. Threading isolates the code we target and procceeds zith the rest of the code.
     while gv.follow_mode:
+        print(gv.offset)
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
             if abs(gv.offset) < 640*0.75:
