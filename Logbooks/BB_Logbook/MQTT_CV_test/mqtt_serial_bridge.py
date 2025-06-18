@@ -213,7 +213,6 @@ def gotoKeyLocation(pose_dict):
                 break
     finally:
         node.destroy_node()
-        rclpy.shutdown()
 
 
 
@@ -230,8 +229,6 @@ def save_current_location(client):
         client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
 
     node.destroy_node()
-    rclpy.shutdown()
-
 
 def nav2_drive_from_cmd_vel():
     node = rclpy.create_node('cmd_vel_listener')
@@ -270,7 +267,6 @@ def nav2_drive_from_cmd_vel():
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
 
 # ################################################################## TELEMETRY ##################################################################
 
@@ -402,7 +398,6 @@ def on_message(client, userdata, msg):
             print(f"[KeyLocation] Could not get pose for '{key_name}'")
         node.destroy_node()
         rclpy.shutdown()
-
 
 
 def main():
