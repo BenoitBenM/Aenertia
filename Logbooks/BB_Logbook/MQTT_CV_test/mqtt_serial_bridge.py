@@ -158,33 +158,47 @@ class PoseRecorder(Node):
             self.get_logger().error(f'TF error: {str(e)}')
             return None
 
+def amcl_callback(msg):
+    global current_pose
+    current_pose['x'] = msg.pose.pose.position.x
+    current_pose['y'] = msg.pose.pose.position.y
+
+    q = msg.pose.pose.orientation
+    siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+    cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+    current_pose['theta'] = math.atan2(siny_cosp, cosy_cosp)
+
+def has_reached_goal(goal):
+    dx = goal['x'] - current_pose['x']
+    dy = goal['y'] - current_pose['y']
+    dtheta = abs(goal['theta'] - current_pose['theta'])
+
+    dist = math.hypot(dx, dy)
+    return dist < GOAL_TOLERANCE and dtheta < ANGLE_TOLERANCE
+
 
 def gotoKeyLocation(pose_dict):
     rclpy.init()
     node = rclpy.create_node('goto_key_location')
-    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
 
+    # 1. Publier la pose cible
+    pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
     msg = PoseStamped()
     msg.header.frame_id = "map"
     msg.pose.position.x = pose_dict['x']
     msg.pose.position.y = pose_dict['y']
     msg.pose.position.z = 0.0
-
     theta = pose_dict['theta']
     msg.pose.orientation.z = math.sin(theta / 2)
     msg.pose.orientation.w = math.cos(theta / 2)
-
     pub.publish(msg)
-    print(f"Pose sent to Nav2 : {pose_dict}")
+    print(f"[NAV2] Pose sent to Nav2: {pose_dict}")
 
-    # Lancer le listener cmd_vel en parallèle (processus séparé)
+    # 2. Lancer l'écoute de /cmd_vel dans un process séparé
     drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
     drive_proc.start()
 
-    rclpy.spin_once(node, timeout_sec=0.5)
-    node.destroy_node()
-    rclpy.shutdown()
-
+    # 3. Souscrire à /amcl_pose pour connaître la position en temps réel
     sub = node.create_subscription(
         PoseWithCovarianceStamped,
         '/amcl_pose',
@@ -192,12 +206,17 @@ def gotoKeyLocation(pose_dict):
         10
     )
 
-    # Keep checking every second until reached
-    while rclpy.ok():
-        rclpy.spin_once(node, timeout_sec=0.5)
-        if has_reached_goal(pose_dict):
-            print("[NAV2] Goal reached!")
-            break
+    # 4. Boucle de vérification : est-ce qu’on a atteint l’objectif ?
+    try:
+        while rclpy.ok():
+            rclpy.spin_once(node, timeout_sec=0.2)
+            if has_reached_goal(pose_dict):
+                print("[NAV2] Goal reached!")
+                break
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
 
 
 def save_current_location(client):
@@ -359,8 +378,6 @@ def on_message(client, userdata, msg):
                     gv.follow_mode = True
                     threading.Thread(target=follow_me, daemon=True).start() # Runs follow_me unless follow_mode is disabled
 
-            elif payload == "return": # This should be GoToKeyLocation Instead of return 
-                gotoKeyLocation()
 
             elif payload == "stop": # To be implemented later
                 send_2_esp("stop")
