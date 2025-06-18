@@ -98,7 +98,7 @@ def follow_me():
     print(gv.HumanDetected)
     while follow_mode:
         print(gv.HumanDetected)
-
+        print(gv.offset)
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
             if abs(gv.offset) < 100: 
