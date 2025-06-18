@@ -16,7 +16,6 @@ from EnergyCalculation import (
     append_to_csv,
     calculate_percentage
 )
-import multiprocessing
 import math
 import tf2_ros
 import rclpy
@@ -195,8 +194,8 @@ def gotoKeyLocation(pose_dict):
     print(f"[NAV2] Pose sent to Nav2: {pose_dict}")
 
     # 2. Lancer l'écoute de /cmd_vel dans un process séparé
-    drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
-    drive_proc.start()
+    threading.Thread(target=nav2_drive_from_cmd_vel, daemon=True).start()
+
 
     # 3. Souscrire à /amcl_pose pour connaître la position en temps réel
     sub = node.create_subscription(
