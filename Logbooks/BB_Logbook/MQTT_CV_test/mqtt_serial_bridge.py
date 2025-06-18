@@ -2,7 +2,8 @@ import paho.mqtt.client as mqtt
 import serial
 import threading # Threading is a library that allows us to run other tasks that the current one in the background
 from time import sleep
-from Advanced_CV.pose_detection import pose_detection, send_frame
+from Advanced_CV.pose_detection import pose_detection
+#, send_frame
 import cv2
 from flask import Flask, Response, send_from_directory
 import json
