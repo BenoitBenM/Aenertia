@@ -53,7 +53,7 @@ def pose_detection():
 #    # print(f"Camera configured at: {cfg[0]}×{cfg[1]}")
 
     cam = cv2.VideoCapture(0)  # 0 = /dev/video0, change if needed
-    cam.set(cv2.CAP_PROP_FPS, 10)
+    #cam.set(cv2.CAP_PROP_FPS, 10)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     time.sleep(2)
