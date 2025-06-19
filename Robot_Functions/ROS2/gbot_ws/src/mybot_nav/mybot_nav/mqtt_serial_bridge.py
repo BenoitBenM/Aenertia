@@ -150,7 +150,6 @@ class PoseRecorder(Node):
 
 
 def gotoKeyLocation(pose_dict):
-    print("Try go to key")
     rclpy.init()
     node = rclpy.create_node('goto_key_location')
     pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
@@ -171,6 +170,24 @@ def gotoKeyLocation(pose_dict):
     rclpy.spin_once(node, timeout_sec=0.5)
     node.destroy_node()
     rclpy.shutdown()
+
+
+def save_current_location(client):
+    rclpy.init()
+    node = PoseRecorder()
+    rclpy.spin_once(node, timeout_sec=1.0)
+
+    pose = node.get_current_pose()
+    if pose is not None:
+        print(f"Position enregistrée : {pose}")
+        client.publish("telemetry/saved_pose", json.dumps(pose))
+    else:
+        print("Cant save location.")
+        client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
+
+    node.destroy_node()
+    rclpy.shutdown()
+
 
 # ################################################################## TELEMETRY ##################################################################
 
@@ -277,6 +294,8 @@ def on_message(client, userdata, msg):
             elif payload == "stop": # To be implemented later
                 send_2_esp("stop")
 
+    if payload == "save":
+        save_current_location(client)
 
     elif topic == "robot/goto_keyloc":
         try:
@@ -285,20 +304,20 @@ def on_message(client, userdata, msg):
         except Exception as e:
             print(f"Invalid pose payload: {e}")
 
-    elif topic == "robot/auto/key/assign":
-        key_name = payload.strip()
-        rclpy.init()
-        node = PoseRecorder()
-        rclpy.spin_once(node, timeout_sec=1.0)
-        pose = node.get_current_pose()
-        if pose:
-            key_locations[key_name] = pose
-            print(f"[KeyLocation] Saved {key_name} → {pose}")
-            client.publish("robot/auto/key/locations", json.dumps(key_locations))
-        else:
-            print(f"[KeyLocation] Could not get pose for '{key_name}'")
-        node.destroy_node()
-        rclpy.shutdown()
+    # elif topic == "robot/auto/key/assign":
+    #     key_name = payload.strip()
+    #     rclpy.init()
+    #     node = PoseRecorder()
+    #     rclpy.spin_once(node, timeout_sec=1.0)
+    #     pose = node.get_current_pose()
+    #     if pose:
+    #         key_locations[key_name] = pose
+    #         print(f"[KeyLocation] Saved {key_name} → {pose}")
+    #         client.publish("robot/auto/key/locations", json.dumps(key_locations))
+    #     else:
+    #         print(f"[KeyLocation] Could not get pose for '{key_name}'")
+    #     node.destroy_node()
+    #     rclpy.shutdown()
 
 
 def main():
