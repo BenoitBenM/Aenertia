@@ -43,7 +43,13 @@ cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
 source install/setup.bash
 ros2 launch mybot_cartographer carto.launch.py
 ```
-
+## Terminal 4 – Launch Rviz
+```bash
+source /opt/ros/jazzy/setup.bash
+cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
+source install/setup.bash
+ros2 launch mybot_nav bringup.launch.py
+```
 ## Terminal 4 – Launch Rviz
 ```bash
 cd ~/carto_ws
