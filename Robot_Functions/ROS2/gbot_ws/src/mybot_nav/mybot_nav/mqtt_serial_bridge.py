@@ -152,8 +152,10 @@ class PoseRecorder(Node):
 
 
 def gotoKeyLocation(pose_dict):
-    if not rclpy.ok():
+    try:
         rclpy.init()
+    except RuntimeError:
+        pass
     node = rclpy.create_node('goto_key_location')
     pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
 
@@ -178,8 +180,10 @@ def gotoKeyLocation(pose_dict):
 
 
 def cmd_vel_listener_discrete():
-    if not rclpy.ok():
+    try:
         rclpy.init()
+    except RuntimeError:
+        pass    
     node = rclpy.create_node('cmd_vel_listener_discrete')
     print("In linear command")
     def callback(msg):
