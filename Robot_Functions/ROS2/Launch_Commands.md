@@ -46,7 +46,7 @@ ros2 launch mybot_cartographer carto.launch.py
 
 ## Terminal 4 – Launch Rviz
 ```bash
-cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
+cd ~/carto_ws
 source install/setup.bash
 rviz2
 ```
