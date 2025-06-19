@@ -248,40 +248,81 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   });
 
-  // === Voice Control ===
-  console.log('[Voice] initializing');
-  const recog = new window.webkitSpeechRecognition();
-  recog.lang = 'en-US'; recog.continuous = false;
-  recog.onstart = ()=>console.log('[Voice] started');
-  recog.onend   = ()=>console.log('[Voice] ended');
-  recog.onerror = err=>console.error('[Voice] error',err);
+// ----------------- VOICE RECOGNITION -----------------
+const recognition = new window.webkitSpeechRecognition();
+recognition.lang = 'en-US';
+recognition.continuous = false;
 
-  const vb = document.getElementById('start-voice');
-  if (vb) {
-    vb.onmousedown = ()=>recog.start();
-    vb.onmouseup   = ()=>recog.stop();
-  }
-  recog.onresult = e=>{
-    const txt = e.results[0][0].transcript;
-    console.log('[Voice] transcript',txt);
-    fetch('http://127.0.0.1:5001/interpret',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({command:txt})
-    })
-    .then(r=>r.json())
-    .then(d=>{
-      const c = (d.result||'').trim().toLowerCase();
-      console.log('[Voice] interpreted',c);
-      if (!client.connected) return alert('MQTT not connected');
-      if (['follow','return','stop'].includes(c)) pub('robot/auto',c);
-      else if (['manual','autonomous'].includes(c)) pub('robot/mode',c);
-      else alert('Unrecognized');
-    })
-    .catch(err=>{
-      console.error('[Voice] send failed',err);
-      alert('Voice error');
-    });
+// Debug logs for recognition lifecycle
+recognition.onstart = () => console.log('[SpeechRecognition] Started listening');
+recognition.onend = () => console.log('[SpeechRecognition] Stopped listening');
+recognition.onerror = (err) => console.error('[SpeechRecognition] Error:', err);
+
+const voiceBtn = document.getElementById('start-voice');
+if (voiceBtn) {
+  voiceBtn.onmousedown = () => {
+    console.log('[DEBUG] Voice button pressed → start recognition');
+    recognition.start();
   };
+  voiceBtn.onmouseup = () => {
+    console.log('[DEBUG] Voice button released → stop recognition');
+    recognition.stop();
+  };
+} else {
+  console.warn('[DEBUG] Could not find button with id="start-voice"');
+}
 
+recognition.onresult = event => {
+  const transcript = event.results[0][0].transcript;
+  console.log('[DEBUG] Voice result received:', transcript);
+  sendToChatGPT(transcript);
+};
+
+// ----------------- sendToChatGPT -----------------
+function sendToChatGPT(commandText) {
+  console.log('[DEBUG] Sending to Flask server:', commandText);
+
+  // Make sure Flask (voice_server.py) is running on port 5001
+  const url = 'http://127.0.0.1:5001/interpret';
+  console.log('[DEBUG] About to call fetch → URL =', url);
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: commandText })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (!data || typeof data.result !== 'string') {
+        console.warn('[DEBUG] Unexpected response from Flask:', data);
+        alert('Error: Invalid response from interpretation server.');
+        return;
+      }
+
+      const cmd = data.result.trim().toLowerCase();
+      console.log('[DEBUG] GPT Interpreted:', cmd);
+
+      // Only publish if MQTT is connected
+      if (!client.connected) {
+        console.warn('[DEBUG] MQTT not connected. Cannot publish command:', cmd);
+        alert('MQTT is not connected. Please check your broker connection.');
+        return;
+      }
+
+      if (cmd === 'follow' || cmd === 'return' || cmd === 'stop') {
+        console.log('[DEBUG] Publishing to robot/auto →', cmd);
+        client.publish('robot/auto', cmd);
+      } else if (cmd === 'manual' || cmd === 'autonomous') {
+        console.log('[DEBUG] Publishing to robot/mode →', cmd);
+        client.publish('robot/mode', cmd);
+      } else {
+        console.warn('[DEBUG] GPT returned unrecognized command:', cmd);
+        alert("Sorry, I couldn't understand that command.");
+      }
+    })
+    .catch(err => {
+      console.error('[DEBUG] Error contacting GPT API or Flask:', err);
+      alert('Error: Could not contact interpretation server.');
+    });
+}
 });
