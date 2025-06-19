@@ -284,14 +284,7 @@ def on_message(client, userdata, msg):
             elif payload == "stop": # To be implemented later
                 send_2_esp("stop")
 
-    if topic == "robot/goto_keyloc":
-        try:
-            pose_dict = json.loads(payload)
-            gotoKeyLocation(pose_dict)
-        except Exception as e:
-            print(f"Invalid pose payload: {e}")
-
-    elif topic == "robot/auto/key/assign":
+    if topic == "robot/auto/key/assign":
         key_name = payload.strip()
         rclpy.init()
         node = PoseRecorder()
@@ -305,6 +298,14 @@ def on_message(client, userdata, msg):
             print(f"[KeyLocation] Could not get pose for '{key_name}'")
         node.destroy_node()
         rclpy.shutdown()
+
+        
+    elif topic == "robot/goto_keyloc":
+        try:
+            pose_dict = json.loads(payload)
+            gotoKeyLocation(pose_dict)
+        except Exception as e:
+            print(f"Invalid pose payload: {e}")
 
 
 
