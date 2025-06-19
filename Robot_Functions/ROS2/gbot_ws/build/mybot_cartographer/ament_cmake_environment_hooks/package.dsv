@@ -1,0 +1,4 @@
+source;share/mybot_cartographer/local_setup.bash
+source;share/mybot_cartographer/local_setup.dsv
+source;share/mybot_cartographer/local_setup.sh
+source;share/mybot_cartographer/local_setup.zsh

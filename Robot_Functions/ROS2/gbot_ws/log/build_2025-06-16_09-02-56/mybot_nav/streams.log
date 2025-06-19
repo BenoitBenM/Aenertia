@@ -1,0 +1,25 @@
+[1.800s] Invoking command in '/home/nihil/gbot_ws/src/mybot_nav': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/nihil/gbot_ws/build/mybot_nav/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/mybot_nav build --build-base /home/nihil/gbot_ws/build/mybot_nav/build install --record /home/nihil/gbot_ws/build/mybot_nav/install.log --single-version-externally-managed install_data
+[2.335s] running egg_info
+[2.383s] writing ../../build/mybot_nav/mybot_nav.egg-info/PKG-INFO
+[2.383s] writing dependency_links to ../../build/mybot_nav/mybot_nav.egg-info/dependency_links.txt
+[2.385s] writing entry points to ../../build/mybot_nav/mybot_nav.egg-info/entry_points.txt
+[2.385s] writing requirements to ../../build/mybot_nav/mybot_nav.egg-info/requires.txt
+[2.387s] writing top-level names to ../../build/mybot_nav/mybot_nav.egg-info/top_level.txt
+[2.492s] reading manifest file '../../build/mybot_nav/mybot_nav.egg-info/SOURCES.txt'
+[2.493s] writing manifest file '../../build/mybot_nav/mybot_nav.egg-info/SOURCES.txt'
+[2.493s] running build
+[2.494s] running build_py
+[2.494s] copying mybot_nav/nav_to_pose.py -> /home/nihil/gbot_ws/build/mybot_nav/build/lib/mybot_nav
+[2.494s] running install
+[2.506s] running install_lib
+[2.591s] copying /home/nihil/gbot_ws/build/mybot_nav/build/lib/mybot_nav/nav_to_pose.py -> /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav
+[2.595s] byte-compiling /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav/nav_to_pose.py to nav_to_pose.cpython-312.pyc
+[2.596s] running install_data
+[2.600s] running install_egg_info
+[2.642s] removing '/home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav-0.0.0-py3.12.egg-info' (and everything under it)
+[2.643s] Copying ../../build/mybot_nav/mybot_nav.egg-info to /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav-0.0.0-py3.12.egg-info
+[2.644s] running install_scripts
+[2.879s] Installing nav_to_pose script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+[2.879s] Installing pose_saver script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+[2.885s] writing list of installed files to '/home/nihil/gbot_ws/build/mybot_nav/install.log'
+[2.996s] Invoked command in '/home/nihil/gbot_ws/src/mybot_nav' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/nihil/gbot_ws/build/mybot_nav/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/mybot_nav build --build-base /home/nihil/gbot_ws/build/mybot_nav/build install --record /home/nihil/gbot_ws/build/mybot_nav/install.log --single-version-externally-managed install_data

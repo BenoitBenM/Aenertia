@@ -23,13 +23,13 @@ This document describes how to launch a full SLAM stack on ROS 2 **Jazzy** using
 ## Terminal 1 – Launch URDF (robot_state_publisher)
 
 ```bash
-cd ~/gbot_ws
+cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
 source install/setup.bash
 ros2 launch mybot_description description.launch.py
 ```
 ## Terminal 2 – Launch the LIDAR (robot_state_publisher)
 ```bash
-cd ~/gbot_ws
+cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
 source install/setup.bash
 ros2 launch rplidar_ros rplidar_a1_launch.py \
   serial_port:=/dev/rplidar \
@@ -39,14 +39,20 @@ ros2 launch rplidar_ros rplidar_a1_launch.py \
 
 ## Terminal 3 – Launch Launch Cartographer
 ```bash
-cd ~/gbot_ws
+cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
 source install/setup.bash
 ros2 launch mybot_cartographer carto.launch.py
 ```
-
 ## Terminal 4 – Launch Rviz
 ```bash
-cd ~/gbot_ws
+source /opt/ros/jazzy/setup.bash
+cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
+source install/setup.bash
+ros2 launch mybot_nav bringup.launch.py
+```
+## Terminal 4 – Launch Rviz
+```bash
+cd ~/carto_ws
 source install/setup.bash
 rviz2
 ```

@@ -1,0 +1,24 @@
+[0.026s] Invoking command in '/home/nihil/gbot_ws/build/mybot_cartographer': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/nihil/gbot_ws/build/mybot_cartographer -- -j4 -l4
+[0.124s] Invoked command in '/home/nihil/gbot_ws/build/mybot_cartographer' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/nihil/gbot_ws/build/mybot_cartographer -- -j4 -l4
+[0.145s] Invoking command in '/home/nihil/gbot_ws/build/mybot_cartographer': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/nihil/gbot_ws/build/mybot_cartographer
+[0.164s] -- Install configuration: ""
+[0.164s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/launch
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/launch/carto.launch.py
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/config
+[0.165s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/config/mybot.lua
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/package_run_dependencies/mybot_cartographer
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/parent_prefix_path/mybot_cartographer
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/ament_prefix_path.sh
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/ament_prefix_path.dsv
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/path.sh
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/path.dsv
+[0.165s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.bash
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.sh
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.zsh
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.dsv
+[0.166s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/package.dsv
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/packages/mybot_cartographer
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/cmake/mybot_cartographerConfig.cmake
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/cmake/mybot_cartographerConfig-version.cmake
+[0.166s] -- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/package.xml
+[0.169s] Invoked command in '/home/nihil/gbot_ws/build/mybot_cartographer' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/nihil/gbot_ws/build/mybot_cartographer

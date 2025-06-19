@@ -1,0 +1,49 @@
+[0.025s] Invoking command in '/home/nihil/gbot_ws/build/mybot_cartographer': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/nihil/gbot_ws/src/mybot_cartographer -DCMAKE_INSTALL_PREFIX=/home/nihil/gbot_ws/install/mybot_cartographer
+[0.154s] -- The C compiler identification is GNU 13.3.0
+[0.276s] -- The CXX compiler identification is GNU 13.3.0
+[0.314s] -- Detecting C compiler ABI info
+[0.525s] -- Detecting C compiler ABI info - done
+[0.540s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.541s] -- Detecting C compile features
+[0.541s] -- Detecting C compile features - done
+[0.559s] -- Detecting CXX compiler ABI info
+[0.774s] -- Detecting CXX compiler ABI info - done
+[0.792s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.792s] -- Detecting CXX compile features
+[0.793s] -- Detecting CXX compile features - done
+[0.800s] -- Found ament_cmake: 2.5.4 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[1.076s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[1.311s] -- Found ament_lint_auto: 0.17.2 (/opt/ros/jazzy/share/ament_lint_auto/cmake)
+[1.546s] -- Added test 'flake8' to check Python code syntax and style conventions
+[1.546s] -- Configured 'flake8' exclude dirs and/or files: 
+[1.548s] -- Added test 'lint_cmake' to check CMake code style
+[1.549s] -- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+[1.551s] -- Added test 'xmllint' to check XML markup files
+[1.553s] -- Configuring done (1.5s)
+[1.558s] -- Generating done (0.0s)
+[1.560s] -- Build files have been written to: /home/nihil/gbot_ws/build/mybot_cartographer
+[1.570s] Invoked command in '/home/nihil/gbot_ws/build/mybot_cartographer' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/nihil/gbot_ws/src/mybot_cartographer -DCMAKE_INSTALL_PREFIX=/home/nihil/gbot_ws/install/mybot_cartographer
+[1.573s] Invoking command in '/home/nihil/gbot_ws/build/mybot_cartographer': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/nihil/gbot_ws/build/mybot_cartographer -- -j4 -l4
+[1.665s] Invoked command in '/home/nihil/gbot_ws/build/mybot_cartographer' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/nihil/gbot_ws/build/mybot_cartographer -- -j4 -l4
+[1.689s] Invoking command in '/home/nihil/gbot_ws/build/mybot_cartographer': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/nihil/gbot_ws/build/mybot_cartographer
+[1.711s] -- Install configuration: ""
+[1.712s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/launch
+[1.712s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/launch/carto.launch.py
+[1.712s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/config
+[1.712s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/config/mybot.lua
+[1.713s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/package_run_dependencies/mybot_cartographer
+[1.713s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/parent_prefix_path/mybot_cartographer
+[1.714s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/ament_prefix_path.sh
+[1.714s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/ament_prefix_path.dsv
+[1.714s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/path.sh
+[1.715s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/path.dsv
+[1.715s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.bash
+[1.715s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.sh
+[1.715s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.zsh
+[1.715s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.dsv
+[1.715s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/package.dsv
+[1.716s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/packages/mybot_cartographer
+[1.716s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/cmake/mybot_cartographerConfig.cmake
+[1.716s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/cmake/mybot_cartographerConfig-version.cmake
+[1.716s] -- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/package.xml
+[1.720s] Invoked command in '/home/nihil/gbot_ws/build/mybot_cartographer' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/nihil/gbot_ws/install/mybot_description:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/nihil/gbot_ws/build/mybot_cartographer

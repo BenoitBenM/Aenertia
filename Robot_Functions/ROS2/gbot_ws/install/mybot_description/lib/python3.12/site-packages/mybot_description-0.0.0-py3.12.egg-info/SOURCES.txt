@@ -1,0 +1,16 @@
+package.xml
+setup.cfg
+setup.py
+../../build/mybot_description/mybot_description.egg-info/PKG-INFO
+../../build/mybot_description/mybot_description.egg-info/SOURCES.txt
+../../build/mybot_description/mybot_description.egg-info/dependency_links.txt
+../../build/mybot_description/mybot_description.egg-info/requires.txt
+../../build/mybot_description/mybot_description.egg-info/top_level.txt
+../../build/mybot_description/mybot_description.egg-info/zip-safe
+launch/description.launch.py
+mybot_description/__init__.py
+resource/mybot_description
+test/test_copyright.py
+test/test_flake8.py
+test/test_pep257.py
+urdf/mybot.urdf
