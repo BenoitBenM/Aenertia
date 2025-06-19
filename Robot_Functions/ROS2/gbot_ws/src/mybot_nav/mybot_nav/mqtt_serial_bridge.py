@@ -150,28 +150,62 @@ class PoseRecorder(Node):
 
 
 def gotoKeyLocation(pose_dict):
-    print("1")
     rclpy.init()
     node = rclpy.create_node('goto_key_location')
     pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
-    print("2")
 
     msg = PoseStamped()
     msg.header.frame_id = "map"
     msg.pose.position.x = pose_dict['x']
     msg.pose.position.y = pose_dict['y']
     msg.pose.position.z = 0.0
-    print("3")
 
     theta = pose_dict['theta']
     msg.pose.orientation.z = math.sin(theta / 2)
     msg.pose.orientation.w = math.cos(theta / 2)
-    print("4")
 
     pub.publish(msg)
     print(f"Pose sent to Nav2 : {pose_dict}")
 
     rclpy.spin_once(node, timeout_sec=0.5)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+def cmd_vel_listener_discrete():
+    rclpy.init()
+    node = rclpy.create_node('cmd_vel_listener_discrete')
+
+    def callback(msg):
+        linear = msg.linear.x
+        angular = msg.angular.z
+        threshold = 0.05  # to avoid noise triggering movement
+
+        command = "stop"
+        if abs(linear) < threshold and abs(angular) < threshold:
+            command = "stop"
+        elif linear >= threshold and abs(angular) < threshold:
+            command = "forward"
+        elif linear <= -threshold and abs(angular) < threshold:
+            command = "backward"
+        elif linear >= threshold and angular >= threshold:
+            command = "forwardANDleft"
+        elif linear >= threshold and angular <= -threshold:
+            command = "forwardANDright"
+        elif linear <= -threshold and angular >= threshold:
+            command = "backwardANDleft"
+        elif linear <= -threshold and angular <= -threshold:
+            command = "backwardANDright"
+        elif abs(linear) < threshold and angular >= threshold:
+            command = "left"
+        elif abs(linear) < threshold and angular <= -threshold:
+            command = "right"
+
+        send_2_esp(command)
+        print(f"[CMD_VEL → ESP] {command}")
+
+    node.create_subscription(Twist, '/cmd_vel', callback, 10)
+    rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
@@ -330,6 +364,9 @@ def main():
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect("localhost", 1883, 60)
+    
+    threading.Thread(target=cmd_vel_listener_discrete, daemon=True).start()
+
     client.loop_forever()
 
 
