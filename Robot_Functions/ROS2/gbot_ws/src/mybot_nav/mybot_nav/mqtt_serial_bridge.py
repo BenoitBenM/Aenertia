@@ -200,7 +200,6 @@ def cmd_vel_listener_discrete():
             pass
         print("[CMD_VEL] rclpy already initialized in another context.")
     node = rclpy.create_node('cmd_vel_listener_discrete')
-    print("In linear command")
 
     def callback(msg):
         linear = msg.linear.x
@@ -226,6 +225,8 @@ def cmd_vel_listener_discrete():
             command = "left"
         elif abs(linear) < threshold and angular <= -threshold:
             command = "right"
+        else :
+            pass
 
         send_2_esp(command)
         print(f"[CMD_VEL → ESP] {command}")
