@@ -114,12 +114,12 @@ def follow_me():
         print(gv.offset)
         if gv.HumanDetected:
             # print("HUMAN DETECTED")
-            if abs(gv.offset) < 320*0.62:
+            if abs(gv.offset) < 300*0.60:
                 send_2_esp("forward")
-            elif 320*0.62 <= gv.offset:
+            elif 300*0.60 <= gv.offset:
                 send_2_esp("forwardANDright")
                 
-            elif -320*0.62 >= gv.offset:
+            elif -300*0.60 >= gv.offset:
                 send_2_esp("forwardANDleft")
 
             else: 
@@ -185,60 +185,59 @@ def gotoKeyLocation(pose_dict):
     print(f"Pose sent to Nav2 : {pose_dict}")
 
     rclpy.spin_once(node, timeout_sec=0.5)
-    print("GOTO finished")
 
     node.destroy_node()
 
 
-def cmd_vel_listener_discrete():
-    global ros2_initialized
-    if not ros2_initialized:
-        try:
-            rclpy.init()
-            ros2_initialized = True
-        except RuntimeError:
-            pass
-        print("[CMD_VEL] rclpy already initialized in another context.")
+# def cmd_vel_listener_discrete():
+#     global ros2_initialized
+#     if not ros2_initialized:
+#         try:
+#             rclpy.init()
+#             ros2_initialized = True
+#         except RuntimeError:
+#             pass
+#         print("[CMD_VEL] rclpy already initialized in another context.")
     
-    node = rclpy.create_node('cmd_vel_listener_discrete')
+#     node = rclpy.create_node('cmd_vel_listener_discrete')
 
-    def callback(msg):
-        linear = msg.linear.x
-        angular = msg.angular.z
-        threshold = 0.05
+#     def callback(msg):
+#         linear = msg.linear.x
+#         angular = msg.angular.z
+#         threshold = 0.05
 
-        command = "stop"
-        if abs(linear) < threshold and abs(angular) < threshold:
-            command = "stop"
-        elif linear >= threshold and abs(angular) < threshold:
-            command = "forward"
-        elif linear <= -threshold and abs(angular) < threshold:
-            command = "backward"
-        elif linear >= threshold and angular >= threshold:
-            command = "forwardANDleft"
-        elif linear >= threshold and angular <= -threshold:
-            command = "forwardANDright"
-        elif linear <= -threshold and angular >= threshold:
-            command = "backwardANDleft"
-        elif linear <= -threshold and angular <= -threshold:
-            command = "backwardANDright"
-        elif abs(linear) < threshold and angular >= threshold:
-            command = "left"
-        elif abs(linear) < threshold and angular <= -threshold:
-            command = "right"
+#         command = "stop"
+#         if abs(linear) < threshold and abs(angular) < threshold:
+#             command = "stop"
+#         elif linear >= threshold and abs(angular) < threshold:
+#             command = "forward"
+#         elif linear <= -threshold and abs(angular) < threshold:
+#             command = "backward"
+#         elif linear >= threshold and angular >= threshold:
+#             command = "forwardANDleft"
+#         elif linear >= threshold and angular <= -threshold:
+#             command = "forwardANDright"
+#         elif linear <= -threshold and angular >= threshold:
+#             command = "backwardANDleft"
+#         elif linear <= -threshold and angular <= -threshold:
+#             command = "backwardANDright"
+#         elif abs(linear) < threshold and angular >= threshold:
+#             command = "left"
+#         elif abs(linear) < threshold and angular <= -threshold:
+#             command = "right"
 
-        send_2_esp(command)
-        print(f"[CMD_VEL → ESP] {command}")
+#         send_2_esp(command)
+#         print(f"[CMD_VEL → ESP] {command}")
 
-    node.create_subscription(Twist, '/cmd_vel', callback, 10)
+#     node.create_subscription(Twist, '/cmd_vel', callback, 10)
 
-    executor = rclpy.executors.SingleThreadedExecutor()
-    executor.add_node(node)
-    try:
-        executor.spin()
-    finally:
-        executor.shutdown()
-        node.destroy_node()
+#     executor = rclpy.executors.SingleThreadedExecutor()
+#     executor.add_node(node)
+#     try:
+#         executor.spin()
+#     finally:
+#         executor.shutdown()
+#         node.destroy_node()
 
 
 
@@ -402,7 +401,7 @@ def main():
     client.on_message = on_message
     client.connect("localhost", 1883, 60)
     
-    threading.Thread(target=cmd_vel_listener_discrete, daemon=True).start()
+    # threading.Thread(target=cmd_vel_listener_discrete, daemon=True).start()
 
     client.loop_forever()
 

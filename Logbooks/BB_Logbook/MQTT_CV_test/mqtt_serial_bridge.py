@@ -194,9 +194,9 @@ def gotoKeyLocation(pose_dict):
     pub.publish(msg)
     print(f"[NAV2] Pose sent to Nav2: {pose_dict}")
 
-    # 2. Lancer l'écoute de /cmd_vel dans un process séparé
-    drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
-    drive_proc.start()
+    # # 2. Lancer l'écoute de /cmd_vel dans un process séparé
+    # drive_proc = multiprocessing.Process(target=nav2_drive_from_cmd_vel)
+    # drive_proc.start()
 
     # 3. Souscrire à /amcl_pose pour connaître la position en temps réel
     sub = node.create_subscription(
@@ -219,61 +219,61 @@ def gotoKeyLocation(pose_dict):
 
 
 
-def save_current_location(client):
-    rclpy.init()
-    node = PoseRecorder()
-    rclpy.spin_once(node, timeout_sec=1.0)
+# def save_current_location(client):
+#     rclpy.init()
+#     node = PoseRecorder()
+#     rclpy.spin_once(node, timeout_sec=1.0)
 
-    pose = node.get_current_pose()
-    if pose is not None:
-        print(f"Position enregistrée : {pose}")
-        client.publish("telemetry/saved_pose", json.dumps(pose))
-    else:
-        print("Cant save location.")
-        client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
+#     pose = node.get_current_pose()
+#     if pose is not None:
+#         print(f"Position enregistrée : {pose}")
+#         client.publish("telemetry/saved_pose", json.dumps(pose))
+#     else:
+#         print("Cant save location.")
+#         client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
 
-    node.destroy_node()
-    rclpy.shutdown()
+#     node.destroy_node()
+#     rclpy.shutdown()
 
 
-def nav2_drive_from_cmd_vel():
-    rclpy.init()
-    node = rclpy.create_node('cmd_vel_listener')
+# def nav2_drive_from_cmd_vel():
+#     rclpy.init()
+#     node = rclpy.create_node('cmd_vel_listener')
 
-    def callback(msg: Twist):
-        linear = msg.linear.x
-        angular = msg.angular.z
+#     def callback(msg: Twist):
+#         linear = msg.linear.x
+#         angular = msg.angular.z
 
-        # Simple thresholding to determine direction
-        if linear > 0.1 and abs(angular) < 0.1:
-            send_2_esp("forward")
-        elif linear < -0.1 and abs(angular) < 0.1:
-            send_2_esp("backward")
-        elif angular > 0.1 and abs(linear) < 0.1:
-            send_2_esp("right")
-        elif angular < -0.1 and abs(linear) < 0.1:
-            send_2_esp("left")
-        elif linear > 0.1 and angular > 0.1:
-            send_2_esp("forwardANDright")
-        elif linear > 0.1 and angular < -0.1:
-            send_2_esp("forwardANDleft")
-        elif linear < -0.1 and angular > 0.1:
-            send_2_esp("backwardANDright")
-        elif linear < -0.1 and angular < -0.1:
-            send_2_esp("backwardANDleft")
-        else:
-            send_2_esp("stop")
-    # Subscribe to /cmd_vel
-    sub = node.create_subscription(Twist, '/cmd_vel', callback, 10)
+#         # Simple thresholding to determine direction
+#         if linear > 0.1 and abs(angular) < 0.1:
+#             send_2_esp("forward")
+#         elif linear < -0.1 and abs(angular) < 0.1:
+#             send_2_esp("backward")
+#         elif angular > 0.1 and abs(linear) < 0.1:
+#             send_2_esp("right")
+#         elif angular < -0.1 and abs(linear) < 0.1:
+#             send_2_esp("left")
+#         elif linear > 0.1 and angular > 0.1:
+#             send_2_esp("forwardANDright")
+#         elif linear > 0.1 and angular < -0.1:
+#             send_2_esp("forwardANDleft")
+#         elif linear < -0.1 and angular > 0.1:
+#             send_2_esp("backwardANDright")
+#         elif linear < -0.1 and angular < -0.1:
+#             send_2_esp("backwardANDleft")
+#         else:
+#             send_2_esp("stop")
+#     # Subscribe to /cmd_vel
+#     sub = node.create_subscription(Twist, '/cmd_vel', callback, 10)
 
-    try:
-        print("[NAV2] Listening to /cmd_vel...")
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+#     try:
+#         print("[NAV2] Listening to /cmd_vel...")
+#         rclpy.spin(node)
+#     except KeyboardInterrupt:
+#         pass
+#     finally:
+#         node.destroy_node()
+#         rclpy.shutdown()
 
 # ################################################################## TELEMETRY ##################################################################
 
@@ -413,7 +413,7 @@ def main():
     #Telemetry loop
     global ser
     global SERIAL_PORT
-    # threading.Thread(target=start_web, daemon=True).start()
+    #threading.Thread(target=start_web, daemon=True).start()
     for port in SERIAL_PORT:
         try:
             ser = serial.Serial(port, baud_rate, timeout=1)
