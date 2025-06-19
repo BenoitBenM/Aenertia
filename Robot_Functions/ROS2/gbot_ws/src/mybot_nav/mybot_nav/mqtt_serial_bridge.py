@@ -172,23 +172,6 @@ def gotoKeyLocation(pose_dict):
     rclpy.shutdown()
 
 
-def save_current_location(client):
-    rclpy.init()
-    node = PoseRecorder()
-    rclpy.spin_once(node, timeout_sec=1.0)
-
-    pose = node.get_current_pose()
-    if pose is not None:
-        print(f"Position enregistrée : {pose}")
-        client.publish("telemetry/saved_pose", json.dumps(pose))
-    else:
-        print("Cant save location.")
-        client.publish("telemetry/saved_pose", json.dumps({"error": "TF unavailable"}))
-
-    node.destroy_node()
-    rclpy.shutdown()
-
-
 # ################################################################## TELEMETRY ##################################################################
 
 def esp_read(client):
@@ -296,10 +279,7 @@ def on_message(client, userdata, msg):
 
             elif payload == "stop": # To be implemented later
                 send_2_esp("stop")
-
-    if payload == "save":
-        save_current_location(client)
-
+                
     elif topic == "robot/goto_keyloc":
         try:
             pose_dict = json.loads(payload)
