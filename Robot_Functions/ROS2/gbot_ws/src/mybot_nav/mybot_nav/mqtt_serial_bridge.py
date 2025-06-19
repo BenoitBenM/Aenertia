@@ -232,7 +232,8 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("robot/mode")
     client.subscribe("robot/auto")
     client.subscribe("robot/manual/command")
-    client.subscribe("robot/auto/key/assign")
+    client.subscribe("robot/manual/command")
+    client.subscribe("robot/goto_keyloc")
     client.publish("robot/auto/key/locations", json.dumps(key_locations))
 
 #     # Removed the thread for continuous CV and put it in follow mode
