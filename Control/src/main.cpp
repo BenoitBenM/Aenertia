@@ -42,7 +42,7 @@ float kp_o = -0.003;
 float ki_o = -0.00007;
 float kd_o = 0.0;
 
-float kp_turn = 125 ;
+float kp_turn = 90;
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
@@ -67,7 +67,7 @@ float lastTargetYaw = 0.0;
 float gyroRate = 0;
 float tiltx_raw = 0;
 float tiltTarget = 0;
-float tiltTargetBias = -0.005;
+float tiltTargetBias = -0.01;
 float tiltError = 0;
 float tiltIntegtal = 0.0;
 float tiltDerivative = 0;
@@ -280,8 +280,8 @@ void loop()
     PMTimer += PM_INTERVAL;
     float voltage = ((readADC(2) * VREF) / 4095.0)*6.1;
     float v5 = ((readADC(3) * VREF) / 4095.0)*2;
-    float current_motor = ((readADC(0) * VREF) / 4095.0)/1.6;
-    float current_board = ((readADC(1) * VREF) / 4095.0)*0.3;
+    float current_motor = ((readADC(0) * VREF) / 4095.0)/1.5;
+    float current_board = 0.70710678+((readADC(1) * VREF) / 4095.0)*0.3;
 
     if(v5 < 0.05){
       v5 = 0;
@@ -293,7 +293,7 @@ void loop()
       current_board = 0;
     }
 
-    energy_used += PM_INTERVAL/1000.0*((current_board*v5)+(current_motor)*voltage);
+    energy_used += PM_INTERVAL/1000.0*((current_board*v5)+(current_motor*voltage));
     voltage_sum += voltage;
     
 
