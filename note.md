@@ -30,3 +30,10 @@ sudo systemctl set-default graphical.target
 ./low_power_setup.sh
 nice -n 19 python3 mqtt_serial_bridge.py
 ```
+
+```bash
+cd ~/Aenertia/Robot_Functions/ROS2/gbot_ws
+colcon build --packages-select mybot_nav
+source install/setup.bash
+ros2 launch mybot_nav bringup.launch.py
+```
