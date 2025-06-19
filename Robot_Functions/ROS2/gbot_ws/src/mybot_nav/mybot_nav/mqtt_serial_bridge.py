@@ -152,7 +152,8 @@ class PoseRecorder(Node):
 
 
 def gotoKeyLocation(pose_dict):
-    rclpy.init()
+    if not rclpy.ok():
+        rclpy.init()
     node = rclpy.create_node('goto_key_location')
     pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
 
@@ -175,7 +176,8 @@ def gotoKeyLocation(pose_dict):
 
 
 def cmd_vel_listener_discrete():
-    rclpy.init()
+    if not rclpy.ok():
+        rclpy.init()
     node = rclpy.create_node('cmd_vel_listener_discrete')
 
     def callback(msg):
@@ -324,7 +326,8 @@ def on_message(client, userdata, msg):
 
     if topic == "robot/auto/key/assign":
         key_name = payload.strip()
-        rclpy.init()
+        if not rclpy.ok():
+            rclpy.init()
         node = PoseRecorder()
         rclpy.spin_once(node, timeout_sec=1.0)
         pose = node.get_current_pose()
