@@ -1,0 +1,4 @@
+[console_scripts]
+mqtt_serial_bridge = mybot_nav.mqtt_serial_bridge:main
+nav_to_pose = mybot_nav.nav_to_pose:main
+pose_saver = mybot_nav.pose_saver:main

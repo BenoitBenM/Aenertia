@@ -1,0 +1,36 @@
+[1.589s] Invoking command in '/home/nihil/gbot_ws/src/mybot_description': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/nihil/gbot_ws/build/mybot_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nihil/gbot_ws/install/mybot_description/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/mybot_description build --build-base /home/nihil/gbot_ws/build/mybot_description/build install --record /home/nihil/gbot_ws/build/mybot_description/install.log --single-version-externally-managed install_data
+[2.227s] running egg_info
+[2.228s] creating ../../build/mybot_description/mybot_description.egg-info
+[2.259s] writing ../../build/mybot_description/mybot_description.egg-info/PKG-INFO
+[2.259s] writing dependency_links to ../../build/mybot_description/mybot_description.egg-info/dependency_links.txt
+[2.259s] writing requirements to ../../build/mybot_description/mybot_description.egg-info/requires.txt
+[2.259s] writing top-level names to ../../build/mybot_description/mybot_description.egg-info/top_level.txt
+[2.260s] writing manifest file '../../build/mybot_description/mybot_description.egg-info/SOURCES.txt'
+[2.322s] reading manifest file '../../build/mybot_description/mybot_description.egg-info/SOURCES.txt'
+[2.323s] writing manifest file '../../build/mybot_description/mybot_description.egg-info/SOURCES.txt'
+[2.323s] running build
+[2.324s] running build_py
+[2.324s] creating /home/nihil/gbot_ws/build/mybot_description/build
+[2.324s] creating /home/nihil/gbot_ws/build/mybot_description/build/lib
+[2.324s] creating /home/nihil/gbot_ws/build/mybot_description/build/lib/mybot_description
+[2.324s] copying mybot_description/__init__.py -> /home/nihil/gbot_ws/build/mybot_description/build/lib/mybot_description
+[2.325s] running install
+[2.336s] running install_lib
+[2.366s] creating /home/nihil/gbot_ws/install/mybot_description/lib/python3.12/site-packages/mybot_description
+[2.367s] copying /home/nihil/gbot_ws/build/mybot_description/build/lib/mybot_description/__init__.py -> /home/nihil/gbot_ws/install/mybot_description/lib/python3.12/site-packages/mybot_description
+[2.367s] byte-compiling /home/nihil/gbot_ws/install/mybot_description/lib/python3.12/site-packages/mybot_description/__init__.py to __init__.cpython-312.pyc
+[2.368s] running install_data
+[2.368s] creating /home/nihil/gbot_ws/install/mybot_description/share/ament_index
+[2.368s] creating /home/nihil/gbot_ws/install/mybot_description/share/ament_index/resource_index
+[2.368s] creating /home/nihil/gbot_ws/install/mybot_description/share/ament_index/resource_index/packages
+[2.368s] copying resource/mybot_description -> /home/nihil/gbot_ws/install/mybot_description/share/ament_index/resource_index/packages
+[2.368s] copying package.xml -> /home/nihil/gbot_ws/install/mybot_description/share/mybot_description
+[2.368s] creating /home/nihil/gbot_ws/install/mybot_description/share/mybot_description/urdf
+[2.368s] copying urdf/mybot.urdf -> /home/nihil/gbot_ws/install/mybot_description/share/mybot_description/urdf
+[2.369s] creating /home/nihil/gbot_ws/install/mybot_description/share/mybot_description/launch
+[2.369s] copying launch/description.launch.py -> /home/nihil/gbot_ws/install/mybot_description/share/mybot_description/launch
+[2.369s] running install_egg_info
+[2.401s] Copying ../../build/mybot_description/mybot_description.egg-info to /home/nihil/gbot_ws/install/mybot_description/lib/python3.12/site-packages/mybot_description-0.0.0-py3.12.egg-info
+[2.402s] running install_scripts
+[2.619s] writing list of installed files to '/home/nihil/gbot_ws/build/mybot_description/install.log'
+[2.721s] Invoked command in '/home/nihil/gbot_ws/src/mybot_description' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/nihil/gbot_ws/build/mybot_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nihil/gbot_ws/install/mybot_description/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/mybot_description build --build-base /home/nihil/gbot_ws/build/mybot_description/build install --record /home/nihil/gbot_ws/build/mybot_description/install.log --single-version-externally-managed install_data

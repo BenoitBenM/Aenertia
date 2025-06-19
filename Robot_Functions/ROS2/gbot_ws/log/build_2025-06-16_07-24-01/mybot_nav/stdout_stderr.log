@@ -1,0 +1,23 @@
+running egg_info
+writing ../../build/mybot_nav/mybot_nav.egg-info/PKG-INFO
+writing dependency_links to ../../build/mybot_nav/mybot_nav.egg-info/dependency_links.txt
+writing entry points to ../../build/mybot_nav/mybot_nav.egg-info/entry_points.txt
+writing requirements to ../../build/mybot_nav/mybot_nav.egg-info/requires.txt
+writing top-level names to ../../build/mybot_nav/mybot_nav.egg-info/top_level.txt
+reading manifest file '../../build/mybot_nav/mybot_nav.egg-info/SOURCES.txt'
+writing manifest file '../../build/mybot_nav/mybot_nav.egg-info/SOURCES.txt'
+running build
+running build_py
+copying mybot_nav/nav_to_pose.py -> /home/nihil/gbot_ws/build/mybot_nav/build/lib/mybot_nav
+running install
+running install_lib
+copying /home/nihil/gbot_ws/build/mybot_nav/build/lib/mybot_nav/nav_to_pose.py -> /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav
+byte-compiling /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav/nav_to_pose.py to nav_to_pose.cpython-312.pyc
+running install_data
+running install_egg_info
+removing '/home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav-0.0.0-py3.12.egg-info' (and everything under it)
+Copying ../../build/mybot_nav/mybot_nav.egg-info to /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot_nav-0.0.0-py3.12.egg-info
+running install_scripts
+Installing nav_to_pose script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+Installing pose_saver script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+writing list of installed files to '/home/nihil/gbot_ws/build/mybot_nav/install.log'
