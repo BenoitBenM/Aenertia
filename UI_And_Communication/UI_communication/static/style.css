@@ -8,7 +8,6 @@ body {
     text-align: center;
 }
 
-/* ── Shared Card Styles ── */
 .card {
     background: white;
     padding: 30px;
@@ -18,7 +17,6 @@ body {
     max-width: 1000px;
 }
 
-/* ── Video + Controls side by side ── */
 .video-layout {
   display: flex;
   flex-wrap: wrap;
@@ -81,7 +79,6 @@ body {
   color: #555;
 }
 
-/* ── Arrow Pad ── */
 .controller {
     display: grid;
     grid-template-columns: repeat(3, 80px);
@@ -124,7 +121,6 @@ body {
     border: none;
 }
 
-/* ── Tabs & Buttons ── */
 .tabs {
   margin: 20px 0;
 }
@@ -159,7 +155,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Info Bar ── */
 .info-bar {
     position: fixed;
     top: 15px;
@@ -172,7 +167,6 @@ body {
     z-index: 1000;
 }
 
-/* ── Forms ── */
 .form-row {
   display: flex;
   justify-content: start;
