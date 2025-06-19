@@ -171,6 +171,8 @@ def gotoKeyLocation(pose_dict):
     print(f"Pose sent to Nav2 : {pose_dict}")
 
     rclpy.spin_once(node, timeout_sec=0.5)
+    print("GOTO finished")
+
     node.destroy_node()
     rclpy.shutdown()
 
@@ -179,7 +181,7 @@ def cmd_vel_listener_discrete():
     if not rclpy.ok():
         rclpy.init()
     node = rclpy.create_node('cmd_vel_listener_discrete')
-
+    print("In linear command")
     def callback(msg):
         linear = msg.linear.x
         angular = msg.angular.z
