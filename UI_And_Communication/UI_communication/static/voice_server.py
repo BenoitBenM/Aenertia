@@ -1,5 +1,3 @@
-# voice_server.py
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -7,7 +5,6 @@ from openai import OpenAI
 import os
 import json
 
-# Load environment variables from .env
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -15,10 +12,8 @@ if not api_key:
         "Please set OPENAI_API_KEY in your .env file before running."
     )
 
-# Initialize OpenAI client
 client = OpenAI(api_key=api_key)
 
-# Define the function schema—including an 'unrecognized' fallback
 functions = [
     {
         "name": "interpret_command",
@@ -59,7 +54,6 @@ def interpret():
         print("Pre-mapped via keyword to: manual")
         return jsonify(result="manual")
 
-    # System prompt now allows 'unrecognized'
     system_msg = (
         "You are a robot assistant. You will receive a single user instruction.  "
         "Your job is to call the function 'interpret_command' with exactly one of these values:\n"
@@ -88,12 +82,10 @@ def interpret():
 
     msg = resp.choices[0].message
 
-    # Ensure it invoked our function
     if not hasattr(msg, "function_call") or msg.function_call.name != "interpret_command":
         print("No valid function_call returned; defaulting to unrecognized")
         return jsonify(result="unrecognized")
 
-    # Parse the JSON arguments
     try:
         args = json.loads(msg.function_call.arguments)
         cmd = args.get("command")
@@ -101,7 +93,6 @@ def interpret():
         print(f"Error parsing function_call.arguments: {e}")
         return jsonify(result="unrecognized")
 
-    # Validate
     if cmd not in ["follow", "return", "stop", "manual", "autonomous", "unrecognized"]:
         print(f"Function returned invalid command: {cmd}")
         cmd = "unrecognized"

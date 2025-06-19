@@ -46,9 +46,8 @@ float kp_turn = 125 ;
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
-float targetYaw = 0;  // 希望的角度，或者从遥控器获得的转动指令
+float targetYaw = 0;
 
-// PID 状态变量
 
 
 float lastAcceleration=0.0;
@@ -97,41 +96,38 @@ bool PM = false;
 
 float C = 0.98;
 
-//Global objects
+
 ESP32Timer ITimer(3);
-Adafruit_MPU6050 mpu;         //Default pins for I2C are SCL: IO22, SDA: IO21
+Adafruit_MPU6050 mpu;
 
 step step1(STEPPER_INTERVAL_US,STEPPER1_STEP_PIN,STEPPER1_DIR_PIN );
 step step2(STEPPER_INTERVAL_US,STEPPER2_STEP_PIN,STEPPER2_DIR_PIN );
 
 
-//Interrupt Service Routine for motor update
-//Note: ESP32 doesn't support floating point calculations in an ISR
+
 bool TimerHandler(void * timerNo)
 {
   static bool toggle = false;
 
-  //Update the stepper motors
   step1.runStepper();
   step2.runStepper();
 
-  //Indicate that the ISR is running
   digitalWrite(TOGGLE_PIN,toggle);  
   toggle = !toggle;
 	return true;
 }
 
 uint16_t readADC(uint8_t channel) {
-  uint8_t tx0 = 0x06 | (channel >> 2);  // Command Byte 0 = Start bit + single-ended mode + MSB of channel
-  uint8_t tx1 = (channel & 0x03) << 6;  // Command Byte 1 = Remaining 2 bits of channel
+  uint8_t tx0 = 0x06 | (channel >> 2);
+  uint8_t tx1 = (channel & 0x03) << 6;
 
   digitalWrite(ADC_CS_PIN, LOW); 
-  SPI.transfer(tx0);                    // Send Command Byte 0
-  uint8_t rx0 = SPI.transfer(tx1);      // Send Command Byte 1 and receive high byte of result
-  uint8_t rx1 = SPI.transfer(0x00);     // Send dummy byte and receive low byte of result
+  SPI.transfer(tx0);
+  uint8_t rx0 = SPI.transfer(tx1);
+  uint8_t rx1 = SPI.transfer(0x00);
 
   digitalWrite(ADC_CS_PIN, HIGH); 
-  uint16_t result = ((rx0 & 0x0F) << 8) | rx1; // Combine high and low byte into 12-bit result
+  uint16_t result = ((rx0 & 0x0F) << 8) | rx1;
   return result;
 }
 
@@ -176,14 +172,12 @@ void setup()
 
 void loop()
 {
-    //Static variables are initialised once and then the value is remembered betweeen subsequent calls to this function
-    static unsigned long printTimer = 0;  //time of the next print
+    static unsigned long printTimer = 0;
     static unsigned long serialTimer = 0;
     static unsigned long PMTimer = 0;
-    static unsigned long loopTimer = 0;   //time of the next control update
-    static float tiltx = 0.0;             //current tilt angle
-    
-    //Run the control loop every LOOP_INTERVAL ms
+    static unsigned long loopTimer = 0;
+    static float tiltx = 0.0;
+
     
   if (millis() > loopTimer) {
     loopTimer += LOOP_INTERVAL; 
@@ -219,7 +213,6 @@ void loop()
 
     dt = (now - lastTime) / 1000.0;
     lastTime = now;
-    // Fetch data from MPU6050
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
     tiltx_raw = atan2(a.acceleration.z, sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y));
