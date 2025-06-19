@@ -180,12 +180,15 @@ def gotoKeyLocation(pose_dict):
 
 
 def cmd_vel_listener_discrete():
+    already_initialized = False
     try:
         rclpy.init()
+        already_initialized = True
     except RuntimeError:
-        pass    
+        print("[CMD_VEL] rclpy already initialized in another context.")
     node = rclpy.create_node('cmd_vel_listener_discrete')
     print("In linear command")
+
     def callback(msg):
         linear = msg.linear.x
         angular = msg.angular.z
@@ -217,7 +220,9 @@ def cmd_vel_listener_discrete():
     node.create_subscription(Twist, '/cmd_vel', callback, 10)
     rclpy.spin(node)
     node.destroy_node()
-    rclpy.shutdown()
+
+    if already_initialized:
+        rclpy.shutdown()
 
 
 # ################################################################## TELEMETRY ##################################################################
