@@ -225,10 +225,6 @@ window.addEventListener('DOMContentLoaded', () => {
   [
     {id:'btn-manual',    topic:'robot/mode', payload:'manual'},
     {id:'btn-autonomous',topic:'robot/mode', payload:'autonomous'},
-    {id:'btn-test',      topic:'robot/mode', payload:'test'},
-    {id:'btn-flash-led', topic:'robot/led',  payload:'flash'},
-    {id:'btn-enable-cv', topic:'robot/cv',   payload:'enable'},
-    {id:'btn-disable-cv',topic:'robot/cv',   payload:'disable'},
     {id:'btn-follow',    topic:'robot/auto', payload:'follow'}
   ].forEach(({id,topic,payload})=>{
     const b = document.getElementById(id);

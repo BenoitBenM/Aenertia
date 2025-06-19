@@ -20,12 +20,10 @@
   <div class="mode-bar-top-left">
     <button class="button" id="btn-manual">Set Manual</button>
     <button class="button" id="btn-autonomous">Set Autonomous</button>
-    <button class="button" id="btn-test">Set Test Mode</button>
   </div>
 
   <div class="tabs">
     <button onclick="showTab('pad')" class="active">Manual Control</button>
-    <button onclick="showTab('flash')">Test</button>
     <button onclick="showTab('pid')">PID Values</button>
     <button onclick="showTab('auto')">Autonomous</button>
   </div>
@@ -34,12 +32,14 @@
     <div class="card video-layout">
       <div class="video-container">
         <h2>Live Camera</h2>
+        <!--
         <img
           id="videoStream"
           class="live-video"
           src="http://172.20.10.9:8001/video_feed"
           alt="Live Camera Feed"
         />
+        -->
       </div>
       <div class="controls-container">
         <h2>Arrow Pad Control</h2>
@@ -51,15 +51,6 @@
           <div class="arrow right" id="right">→</div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div id="flash" class="tab">
-    <div class="card">
-      <h1>Flash LED / CV</h1>
-      <button class="button" id="btn-flash-led">Flash LED</button>
-      <button class="button" id="btn-enable-cv">Enable CV</button>
-      <button class="button" id="btn-disable-cv">Disable CV</button>
     </div>
   </div>
 
@@ -118,12 +109,14 @@
     <div class="card video-layout">
       <div class="video-container">
         <h2>Live Camera</h2>
+        <!--
         <img
           id="videoStreamAuto"
           class="live-video"
           src="http://172.20.10.9:8001/video_feed"
           alt="Live Camera Feed"
         />
+        -->
       </div>
       <div class="controls-container">
         <h2>Autonomous Control</h2>
@@ -131,7 +124,9 @@
         <button class="button" id="btn-follow">Follow Me</button>
 
         <table class="location-table">
-          <thead><tr><th colspan="4">Return to Key Location</th></tr></thead>
+          <thead>
+            <tr><th colspan="4">Return to Key Location</th></tr>
+          </thead>
           <tbody>
             <tr>
               <td>
@@ -153,7 +148,6 @@
             </tr>
           </tbody>
         </table>
-
       </div>
     </div>
   </div>
