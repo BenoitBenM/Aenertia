@@ -42,18 +42,19 @@ float kp_o = -0.003;
 float ki_o = -0.00007;
 float kd_o = 0.0;
 
-float kp_turn = 90;
+float kp_turn = 20;  
 float ki_turn = 0.0;
 float kd_turn = 0.0;
 
-float targetYaw = 0;
+float targetYaw = 0;  // 希望的角度，或者从遥控器获得的转动指令
 
+// PID 状态变量
 
 
 float lastAcceleration=0.0;
 
-float speed_max = 14;
-float yaw_max = 0.04;
+float speed_max = 10;
+float yaw_max = 0.08;
 
 float targetSpeed = 0;
 float actualSpeed = 0;
@@ -67,7 +68,7 @@ float lastTargetYaw = 0.0;
 float gyroRate = 0;
 float tiltx_raw = 0;
 float tiltTarget = 0;
-float tiltTargetBias = -0.01;
+float tiltTargetBias = 0;
 float tiltError = 0;
 float tiltIntegtal = 0.0;
 float tiltDerivative = 0;
@@ -96,38 +97,41 @@ bool PM = true;
 
 float C = 0.98;
 
-
+//Global objects
 ESP32Timer ITimer(3);
-Adafruit_MPU6050 mpu;
+Adafruit_MPU6050 mpu;         //Default pins for I2C are SCL: IO22, SDA: IO21
 
 step step1(STEPPER_INTERVAL_US,STEPPER1_STEP_PIN,STEPPER1_DIR_PIN );
 step step2(STEPPER_INTERVAL_US,STEPPER2_STEP_PIN,STEPPER2_DIR_PIN );
 
 
-
+//Interrupt Service Routine for motor update
+//Note: ESP32 doesn't support floating point calculations in an ISR
 bool TimerHandler(void * timerNo)
 {
   static bool toggle = false;
 
+  //Update the stepper motors
   step1.runStepper();
   step2.runStepper();
 
+  //Indicate that the ISR is running
   digitalWrite(TOGGLE_PIN,toggle);  
   toggle = !toggle;
 	return true;
 }
 
 uint16_t readADC(uint8_t channel) {
-  uint8_t tx0 = 0x06 | (channel >> 2);
-  uint8_t tx1 = (channel & 0x03) << 6;
+  uint8_t tx0 = 0x06 | (channel >> 2);  // Command Byte 0 = Start bit + single-ended mode + MSB of channel
+  uint8_t tx1 = (channel & 0x03) << 6;  // Command Byte 1 = Remaining 2 bits of channel
 
   digitalWrite(ADC_CS_PIN, LOW); 
-  SPI.transfer(tx0);
-  uint8_t rx0 = SPI.transfer(tx1);
-  uint8_t rx1 = SPI.transfer(0x00);
+  SPI.transfer(tx0);                    // Send Command Byte 0
+  uint8_t rx0 = SPI.transfer(tx1);      // Send Command Byte 1 and receive high byte of result
+  uint8_t rx1 = SPI.transfer(0x00);     // Send dummy byte and receive low byte of result
 
   digitalWrite(ADC_CS_PIN, HIGH); 
-  uint16_t result = ((rx0 & 0x0F) << 8) | rx1;
+  uint16_t result = ((rx0 & 0x0F) << 8) | rx1; // Combine high and low byte into 12-bit result
   return result;
 }
 
@@ -172,12 +176,15 @@ void setup()
 
 void loop()
 {
-    static unsigned long printTimer = 0;
+    //Static variables are initialised once and then the value is remembered betweeen subsequent call
+    
+    static unsigned long printTimer = 0;  //time of the next print
     static unsigned long serialTimer = 0;
     static unsigned long PMTimer = 0;
-    static unsigned long loopTimer = 0;
-    static float tiltx = 0.0;
-
+    static unsigned long loopTimer = 0;   //time of the next control update
+    static float tiltx = 0.0;             //current tilt angle
+    
+    //Run the control loop every LOOP_INTERVAL ms
     
   if (millis() > loopTimer) {
     loopTimer += LOOP_INTERVAL; 
@@ -213,6 +220,7 @@ void loop()
 
     dt = (now - lastTime) / 1000.0;
     lastTime = now;
+    // Fetch data from MPU6050
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
     tiltx_raw = atan2(a.acceleration.z, sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y));
@@ -280,8 +288,8 @@ void loop()
     PMTimer += PM_INTERVAL;
     float voltage = ((readADC(2) * VREF) / 4095.0)*6.1;
     float v5 = ((readADC(3) * VREF) / 4095.0)*2;
-    float current_motor = ((readADC(0) * VREF) / 4095.0)/1.5;
-    float current_board = 0.70710678+((readADC(1) * VREF) / 4095.0)*0.3;
+    float current_motor = ((readADC(0) * VREF) / 4095.0)/1.6;
+    float current_board = ((readADC(1) * VREF) / 4095.0)*0.3;
 
     if(v5 < 0.05){
       v5 = 0;
@@ -293,7 +301,7 @@ void loop()
       current_board = 0;
     }
 
-    energy_used += PM_INTERVAL/1000.0*((current_board*v5)+(current_motor*voltage));
+    energy_used += PM_INTERVAL/1000.0*((current_board*v5)+(current_motor)*voltage);
     voltage_sum += voltage;
     
 
@@ -310,6 +318,8 @@ void loop()
       serializeJson(doc, output);
       Serial.print("PM: ");
       Serial.println(output);
+      Serial.println(current_motor);
+      Serial.println(current_board);
 
       voltage_sum = 0;
       energy_used = 0;
@@ -397,24 +407,24 @@ void loop()
     }
     else if (command == "left") {
       targetSpeed = 0;
-      targetYaw = yaw_max*1.7;
+      targetYaw = yaw_max;
       Serial.println("left");
     }
     else if (command == "right") {
       targetSpeed = 0;
-      targetYaw = -yaw_max*1.7;
+      targetYaw = -yaw_max;
       Serial.println("right");
     }
 
     else if(command == "forwardANDleft") {
       targetSpeed = speed_max;
-      targetYaw = yaw_max*0.45;
+      targetYaw = yaw_max;
       Serial.println("Forward and left");
 
     }
     else if (command == "forwardANDright") {
       targetSpeed = speed_max;
-      targetYaw = -yaw_max*0.45;
+      targetYaw = -yaw_max;
       Serial.println("Forward and right");
     }
     else if (command == "backwardANDleft") {

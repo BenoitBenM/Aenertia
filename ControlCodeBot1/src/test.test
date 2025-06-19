@@ -1,0 +1,81 @@
+#include <Arduino.h>
+#include <Arduino.h>
+#include <SPI.h>
+#include <TimerInterrupt_Generic.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <step.h>
+#include <ArduinoJson.h>
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+
+void reset(){
+    digitalWrite(16, false);
+    digitalWrite(17, false);
+    digitalWrite(18, false);
+    digitalWrite(19, false);
+}
+
+void setup(){
+    Serial.begin(115200);
+    SerialBT.begin("ESP32_BT_Test");
+    pinMode(16,OUTPUT);
+    pinMode(17,OUTPUT);
+    pinMode(18, OUTPUT);
+    pinMode(19, OUTPUT);
+    digitalWrite(16, false);
+    digitalWrite(17, false);
+    digitalWrite(18, false);
+    digitalWrite(19, false);
+}
+
+void loop(){
+    if(SerialBT.available()) {
+    String command = SerialBT.readStringUntil('\n');
+    command.trim();
+    Serial.println(command);
+    // We start by checking if the mode was changed
+    
+        if(command == "forward") {
+            reset();
+            digitalWrite(16, true);
+        }
+        else if (command == "backward") {
+            reset();
+            digitalWrite(17, true);
+        }
+        else if (command == "left") {
+            reset();
+            digitalWrite(18,true);
+        }
+        else if (command == "right") {
+            reset();
+            digitalWrite(19,true);
+        }
+        else if(command == "forwardANDleft") {
+            reset();
+            digitalWrite(16, true);
+            digitalWrite(18,true);
+        }
+        else if (command == "forwardANDright") {
+            reset();
+            digitalWrite(16, true);
+            digitalWrite(19,true);
+        }
+        else if (command == "backwardANDleft") {
+            reset();
+            digitalWrite(17, true);
+            digitalWrite(18,true);
+        }
+        else if (command == "backwardANDright") {
+            reset();
+            digitalWrite(17, true);
+            digitalWrite(19,true);
+        }
+        else if (command == "stop") {
+            reset();
+        }
+  }
+
+}
