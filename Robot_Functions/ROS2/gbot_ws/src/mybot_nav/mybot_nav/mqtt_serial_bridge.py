@@ -28,7 +28,13 @@ from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 
+import atexit
 
+@atexit.register
+def shutdown_ros2():
+    global ros2_initialized
+    if ros2_initialized:
+        rclpy.shutdown()
 
 #Serial config (i included many ports just n case we somehow connect to an unexpected port number. It is very unlikely it goes above 1) 
 SERIAL_PORT = [ "/dev/esp32", "/dev/ttyUSB1", "/dev/ttyUSB2","/dev/ttyUSB3", "/dev/ttyUSB4", 
@@ -46,6 +52,9 @@ mode = "manual"
 #gv.follow_mode = False
 #gv.HumanDetected = False
 #gv.offset = 0
+
+ros2_initialized = False
+
 
 key_locations = {}
 
@@ -152,10 +161,13 @@ class PoseRecorder(Node):
 
 
 def gotoKeyLocation(pose_dict):
-    try:
-        rclpy.init()
-    except RuntimeError:
-        pass
+    global ros2_initialized
+    if not ros2_initialized:
+        try:
+            rclpy.init()
+            ros2_initialized = True
+        except RuntimeError:
+            pass
     node = rclpy.create_node('goto_key_location')
     pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
 
@@ -176,15 +188,16 @@ def gotoKeyLocation(pose_dict):
     print("GOTO finished")
 
     node.destroy_node()
-    rclpy.shutdown()
 
 
 def cmd_vel_listener_discrete():
-    already_initialized = False
-    try:
-        rclpy.init()
-        already_initialized = True
-    except RuntimeError:
+    global ros2_initialized
+    if not ros2_initialized:
+        try:
+            rclpy.init()
+            ros2_initialized = True
+        except RuntimeError:
+            pass
         print("[CMD_VEL] rclpy already initialized in another context.")
     node = rclpy.create_node('cmd_vel_listener_discrete')
     print("In linear command")
@@ -220,9 +233,6 @@ def cmd_vel_listener_discrete():
     node.create_subscription(Twist, '/cmd_vel', callback, 10)
     rclpy.spin(node)
     node.destroy_node()
-
-    if already_initialized:
-        rclpy.shutdown()
 
 
 # ################################################################## TELEMETRY ##################################################################
@@ -337,8 +347,13 @@ def on_message(client, userdata, msg):
 
     if topic == "robot/auto/key/assign":
         key_name = payload.strip()
-        if not rclpy.ok():
-            rclpy.init()
+        global ros2_initialized
+        if not ros2_initialized:
+            try:
+                rclpy.init()
+                ros2_initialized = True
+            except RuntimeError:
+                pass
         node = PoseRecorder()
         rclpy.spin_once(node, timeout_sec=1.0)
         pose = node.get_current_pose()
@@ -349,7 +364,6 @@ def on_message(client, userdata, msg):
         else:
             print(f"[KeyLocation] Could not get pose for '{key_name}'")
         node.destroy_node()
-        rclpy.shutdown()
 
         
     elif topic == "robot/goto_keyloc":
