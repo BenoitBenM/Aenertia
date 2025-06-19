@@ -150,19 +150,23 @@ class PoseRecorder(Node):
 
 
 def gotoKeyLocation(pose_dict):
+    print("1")
     rclpy.init()
     node = rclpy.create_node('goto_key_location')
     pub = node.create_publisher(PoseStamped, '/goal_pose', 10)
+    print("2")
 
     msg = PoseStamped()
     msg.header.frame_id = "map"
     msg.pose.position.x = pose_dict['x']
     msg.pose.position.y = pose_dict['y']
     msg.pose.position.z = 0.0
+    print("3")
 
     theta = pose_dict['theta']
     msg.pose.orientation.z = math.sin(theta / 2)
     msg.pose.orientation.w = math.cos(theta / 2)
+    print("4")
 
     pub.publish(msg)
     print(f"Pose sent to Nav2 : {pose_dict}")
