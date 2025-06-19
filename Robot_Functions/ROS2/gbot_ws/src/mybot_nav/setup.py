@@ -27,7 +27,7 @@ setup(
         'console_scripts': [
             'pose_saver = mybot_nav.pose_saver:main',
             'nav_to_pose = mybot_nav.nav_to_pose:main',
-            'mqtt_serial_bridge = mybot_nav.mqtt_serial_bridge:main',  # si tu veux le lancer comme exec
+            'mqtt_serial_bridge = mybot_nav.mqtt_serial_bridge:main',
         ],
     },
 )
