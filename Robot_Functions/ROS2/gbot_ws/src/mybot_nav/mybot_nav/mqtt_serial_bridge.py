@@ -401,7 +401,7 @@ def main():
     client.on_message = on_message
     client.connect("localhost", 1883, 60)
     
-    threading.Thread(target=cmd_vel_listener_discrete, daemon=True).start()
+    # threading.Thread(target=cmd_vel_listener_discrete, daemon=True).start()
 
     client.loop_forever()
 
