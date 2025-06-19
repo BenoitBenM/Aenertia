@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: mybot-nav
+Version: 0.0.0
+Summary: Pose saver and MQTT bridge for navigation
+Maintainer: nihil
+Maintainer-email: nihil@todo.todo
+License: MIT

@@ -1,0 +1,17 @@
+running develop
+running egg_info
+writing mybot_nav.egg-info/PKG-INFO
+writing dependency_links to mybot_nav.egg-info/dependency_links.txt
+writing entry points to mybot_nav.egg-info/entry_points.txt
+writing requirements to mybot_nav.egg-info/requires.txt
+writing top-level names to mybot_nav.egg-info/top_level.txt
+reading manifest file 'mybot_nav.egg-info/SOURCES.txt'
+writing manifest file 'mybot_nav.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot-nav.egg-link (link to .)
+Installing mqtt_serial_bridge script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+Installing nav_to_pose script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+Installing pose_saver script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+
+Installed /home/nihil/gbot_ws/build/mybot_nav
+running symlink_data

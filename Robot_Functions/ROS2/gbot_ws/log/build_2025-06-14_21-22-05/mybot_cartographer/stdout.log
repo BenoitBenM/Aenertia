@@ -1,0 +1,20 @@
+-- Install configuration: ""
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/launch
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/launch/carto.launch.py
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/config
+-- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/config/mybot.lua
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/package_run_dependencies/mybot_cartographer
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/parent_prefix_path/mybot_cartographer
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/ament_prefix_path.sh
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/ament_prefix_path.dsv
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/path.sh
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/environment/path.dsv
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.bash
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.sh
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.zsh
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/local_setup.dsv
+-- Installing: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/package.dsv
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/ament_index/resource_index/packages/mybot_cartographer
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/cmake/mybot_cartographerConfig.cmake
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/cmake/mybot_cartographerConfig-version.cmake
+-- Up-to-date: /home/nihil/gbot_ws/install/mybot_cartographer/share/mybot_cartographer/package.xml

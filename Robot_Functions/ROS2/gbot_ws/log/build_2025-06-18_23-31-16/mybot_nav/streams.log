@@ -1,0 +1,23 @@
+[1.240s] Invoking command in '/home/nihil/gbot_ws/build/mybot_nav': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/nihil/gbot_ws/build/mybot_nav/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nihil/gbot_ws/build/mybot_nav/build --no-deps symlink_data
+[1.692s] running develop
+[1.972s] running egg_info
+[1.998s] writing mybot_nav.egg-info/PKG-INFO
+[1.998s] writing dependency_links to mybot_nav.egg-info/dependency_links.txt
+[2.005s] writing entry points to mybot_nav.egg-info/entry_points.txt
+[2.005s] writing requirements to mybot_nav.egg-info/requires.txt
+[2.006s] writing top-level names to mybot_nav.egg-info/top_level.txt
+[2.065s] reading manifest file 'mybot_nav.egg-info/SOURCES.txt'
+[2.066s] writing manifest file 'mybot_nav.egg-info/SOURCES.txt'
+[2.094s] running build_ext
+[2.094s] Creating /home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages/mybot-nav.egg-link (link to .)
+[2.095s] Installing mqtt_serial_bridge script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+[2.095s] Installing nav_to_pose script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+[2.095s] Installing pose_saver script to /home/nihil/gbot_ws/install/mybot_nav/lib/mybot_nav
+[2.096s] 
+[2.096s] Installed /home/nihil/gbot_ws/build/mybot_nav
+[2.096s] running symlink_data
+[2.096s] creating /home/nihil/gbot_ws/install/mybot_nav/share/mybot_nav/launch
+[2.096s] symbolically linking /home/nihil/gbot_ws/build/mybot_nav/launch/bringup.launch.py -> /home/nihil/gbot_ws/install/mybot_nav/share/mybot_nav/launch
+[2.096s] creating /home/nihil/gbot_ws/install/mybot_nav/share/mybot_nav/config
+[2.096s] symbolically linking /home/nihil/gbot_ws/build/mybot_nav/mybot_nav/config/nav2_params.yaml -> /home/nihil/gbot_ws/install/mybot_nav/share/mybot_nav/config
+[2.199s] Invoked command in '/home/nihil/gbot_ws/build/mybot_nav' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/nihil/gbot_ws/build/mybot_nav/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nihil/gbot_ws/install/mybot_nav/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nihil/gbot_ws/build/mybot_nav/build --no-deps symlink_data
