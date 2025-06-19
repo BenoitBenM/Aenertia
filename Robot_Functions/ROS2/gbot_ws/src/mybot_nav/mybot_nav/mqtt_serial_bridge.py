@@ -199,12 +199,13 @@ def cmd_vel_listener_discrete():
         except RuntimeError:
             pass
         print("[CMD_VEL] rclpy already initialized in another context.")
+    
     node = rclpy.create_node('cmd_vel_listener_discrete')
 
     def callback(msg):
         linear = msg.linear.x
         angular = msg.angular.z
-        threshold = 0.05  # to avoid noise triggering movement
+        threshold = 0.05
 
         command = "stop"
         if abs(linear) < threshold and abs(angular) < threshold:
@@ -225,15 +226,20 @@ def cmd_vel_listener_discrete():
             command = "left"
         elif abs(linear) < threshold and angular <= -threshold:
             command = "right"
-        else :
-            pass
 
         send_2_esp(command)
         print(f"[CMD_VEL → ESP] {command}")
 
     node.create_subscription(Twist, '/cmd_vel', callback, 10)
-    rclpy.spin(node)
-    node.destroy_node()
+
+    executor = rclpy.executors.SingleThreadedExecutor()
+    executor.add_node(node)
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+
 
 
 # ################################################################## TELEMETRY ##################################################################
